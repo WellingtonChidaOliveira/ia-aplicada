@@ -3,11 +3,11 @@
 ## 📅 Status Atual
 - **Data do Check-in:** 2026-03-19
 - **Horas Estudadas na Semana:** [0]/14h
-- **Fase Atual:** [Ex: 1. Fundamentos / 2. APIs e Prompt Engineering / 3. RAG e Arquitetura] 1. Machine learning
+- **Fase Atual:** 1. Machine learning
 
 ## 🎯 Metas da Semana Concluídas
-- [ ] Meta 1 (Ex: Entender a diferença entre ML, Deep Learning e GenAI)
-- [ ] Meta 2 (Ex: Fazer 1 chamada de API da OpenAI usando Python ou Go)
+- [x] Meta 1 Entender a diferença entre ML, Deep Learning e GenAI
+- [x] Meta 2 Fazer uma app usando tensorflow
 - [ ] Meta 3 (Ex: Adicionar 5 cards novos no Anki sobre conceitos de IA)
 
 ## 💡 O que eu aprendi (Técnica de Feynman)
@@ -20,4 +20,4 @@
 
 ## 🛠️ Prática / Projetos
 - **Projeto atual:** suggest-size
-- **Link do PR/Repo:** [\[day-1\]](https://github.com/WellingtonChidaOliveira/ia-aplicada/tree/main/ia-aplicada/tensor)
+- **Link do PR/Repo:** [\[day-1\]](https://github.com/WellingtonChidaOliveira/ia-aplicada/tree/main/ia-aplicada/suggest-size)
