@@ -2,73 +2,39 @@ importScripts("https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest");
 
 const MODEL_PATH = `yolov5n_web_model/model.json`;
 const LABELS_PATH = `yolov5n_web_model/labels.json`;
-const MODEL_INPUT_SIZE = 640;
-
-/*
- steps to construct predict game
-
- first - load model and labels(fetch labels)
- second - load model (using model_path/ YOLO)
- third - warm up model
- fourth -  execute model using dummy and dispose tensor
- fifth - post message model-load
- sixth - transforme image to tensor when predict is called
- seventh - setting dimension 640 x 640
- eighth - process image with resizeBilinear with div 255 to transform to tensor 0 -1
- ninth - get data model run interface
- tenth - execute model and dispose tensor
- eleventh - transforme in js object with (x, y), score and class (boxes, scores, class)
- twelfth - filter by score > 0.5
- thirteenth -   dispose objects
- fourteenth -  return object with (x, y), score and class
- 
- */
-
+const MODEL_SIZE_SCREEN = 640;
+const TRASH_HOLD = 0.5;
 let _labels = [];
 let _model = null;
-
-//first step
-//load labels and models
-//warmup the model
-//post message model-loaded
+//load models and image
 async function loadModelAndLabels() {
   await tf.ready();
 
   _labels = await fetch(LABELS_PATH).then((res) => res.json());
   _model = await tf.loadGraphModel(MODEL_PATH);
 
-  //warmup
-  const dummy = tf.ones(_model.inputs[1].shape);
-  await _model.executeAsync(dummy);
+  //dummy train
+  const dummyInput = tf.ones(_model.inputs[0].shape);
+  await _model.executeAsync(dummyInput);
+  tf.dispose(dummyInput);
 
-  postMessage({ type: "model-loaded" });
+  postMessage({ type: "model_loaded" });
 }
 
-function processImage(image) {
-  //dispose all tensors
+function preprocessImage(image) {
   return tf.tidy(() => {
-    //transform image to tensor
-    const imageTensor = tf.browser.fromPixels(image);
+    const tensor = tf.browser.fromPixels(image);
 
-    //setting dimension 640 x 640
-    //div 255 to transform to tensor 0 -1
-    //expand dimension to 1
-    //return tensor
     return tf.image
-      .resizeBilinear(imageTensor, [MODEL_INPUT_SIZE, MODEL_INPUT_SIZE])
+      .resizeBilinear(tensor, [MODEL_SIZE_SCREEN, MODEL_SIZE_SCREEN])
       .div(255)
       .expandDims(0);
   });
 }
 
-//Execute model pass tensor image
-//get boxes, scores and classes propies from image
-//dispose tensor
-//return object with boxes, scores and classes
-async function runInterfaces(tensor) {
-  const output = await _model.executeAsync(tensor);
-  tf.dispose(tensor);
-
+async function runInterface(input) {
+  const output = await _model.executeAsync(input);
+  tf.dispose(input);
   const [boxes, scores, classes] = output.slice(0, 3);
   const [boxesData, scoresData, classesData] = await Promise.all([
     boxes.data(),
@@ -76,34 +42,52 @@ async function runInterfaces(tensor) {
     classes.data(),
   ]);
 
-  output.forEach((t) => t.dispose());
+  output.forEach((tensor) => tf.dispose(tensor));
 
-  return {
-    boxesData,
-    scoresData,
-    classesData,
-  };
+  return { boxes: boxesData, scores: scoresData, classes: classesData };
+}
+
+function* predictionDuck({ boxes, scores, classes }, width, height) {
+  for (let i = 0; i < scores.length; i++) {
+    if (scores[i] < TRASH_HOLD) continue;
+
+    const label = _labels[classes[i]];
+    if (label !== "kite") continue;
+
+    let [x1, y1, x2, y2] = boxes.slice(i * 4, (i + 1) * 4);
+    x1 *= width;
+    y1 *= height;
+    x2 *= width;
+    y2 *= height;
+
+    const centerX = (x1 + x2) / 2;
+    const centerY = (y1 + y2) / 2;
+
+    yield {
+      x: centerX,
+      y: centerY,
+      score: (scores[i] * 100).toFixed(2),
+      timestamp: performance.now(),
+    };
+  }
 }
 
 loadModelAndLabels();
-//after load models and labels verify if model is loaded correctly
-//process image
-
 self.onmessage = async ({ data }) => {
   if (data.type !== "predict") return;
 
   if (!_model) return;
-  const input = processImage(data.image);
+
+  const input = preprocessImage(data.image);
   const { width, height } = data.image;
 
-  const interfaceResults = await runInterfaces(input);
-
-  postMessage({
-    type: "prediction",
-    x: 400,
-    y: 400,
-    score: 0,
-  });
+  const interfaceResult = await runInterface(input);
+  for (const prediction of predictionDuck(interfaceResult, width, height)) {
+    postMessage({
+      type: "prediction",
+      ...prediction,
+    });
+  }
 };
 
 console.log("🧠 YOLOv5n Web Worker initialized");
