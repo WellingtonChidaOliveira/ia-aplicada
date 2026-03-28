@@ -1,5 +1,9 @@
 import { buildLayout } from "./layout";
 
+// Must match the logical stage dimensions in Stage.js
+const STAGE_MAX_X = 800;
+const STAGE_MAX_Y = 600;
+
 export default async function main(game) {
     const container = buildLayout(game.app);
     const worker = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });
@@ -32,6 +36,11 @@ export default async function main(game) {
         worker.postMessage({
             type: 'predict',
             image: bitmap,
+            // Send the logical stage dimensions so the worker scales
+            // predictions to the stage coordinate system, not the
+            // screen pixel coordinate system.
+            stageWidth: STAGE_MAX_X,
+            stageHeight: STAGE_MAX_Y,
         }, [bitmap]);
 
     }, 200); // every 200ms
