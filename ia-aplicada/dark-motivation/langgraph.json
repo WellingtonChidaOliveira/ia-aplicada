@@ -1,0 +1,7 @@
+{
+  "graphs": {
+    "dark-motivation": "./src/agent/factory.ts:graph"
+  },
+  "dependencies": ["."],
+  "env": ".env"
+}
