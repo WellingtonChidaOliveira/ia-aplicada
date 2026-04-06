@@ -1,8 +1,9 @@
 import { StateGraph, START, END, MessagesZodMeta } from "@langchain/langgraph";
 import { z } from "zod/v3";
-import { llm } from "./nodes/llm.ts";
+import { phraseGenerator } from "./nodes/phraseGenerator.ts";
 import { withLangGraph } from "@langchain/langgraph/zod";
 import { BaseMessage } from "@langchain/core/messages";
+import { LlmRouterService } from "../server/llmRouterService.ts";
 
 const MessageState = z.object({
   messages: withLangGraph(z.custom<BaseMessage[]>(), MessagesZodMeta),
@@ -14,13 +15,13 @@ const MessageState = z.object({
 
 export type GraphMessageState = z.infer<typeof MessageState>;
 
-export function buildGraph() {
+export function buildGraph(llmClient: LlmRouterService) {
   const graph = new StateGraph({
     stateSchema: MessageState,
   })
-    .addNode("llm", llm)
-    .addEdge(START, "llm")
-    .addEdge("llm", END);
+    .addNode("phraseGenerator", phraseGenerator(llmClient))
+    .addEdge(START, "phraseGenerator")
+    .addEdge("phraseGenerator", END);
 
   return graph.compile();
 }

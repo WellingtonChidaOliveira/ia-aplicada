@@ -1,6 +1,6 @@
 import { ChatOpenAI } from "@langchain/openai";
 import { config, type ModelConfig } from "../config/config.ts";
-import { z } from "zod/v3";
+import { z } from "zod";
 import {
   createAgent,
   HumanMessage,
@@ -21,6 +21,9 @@ export class LlmRouterService {
       temperature: 0.7,
       configuration: {
         baseURL: "https://openrouter.ai/api/v1",
+        defaultHeaders: {
+          "Content-Type": "application/json",
+        },
       },
       modelKwargs: {
         models: this.config.models,

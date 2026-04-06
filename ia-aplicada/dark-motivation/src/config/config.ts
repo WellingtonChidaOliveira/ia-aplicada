@@ -16,7 +16,7 @@ console.assert(
 
 export const config: ModelConfig = {
   apiKey: process.env.OPENROUTER_API_KEY || "",
-  models: ["cognitivecomputations/dolphin-mistral-24b-venice-edition:free"],
+  models: ["nvidia/nemotron-3-super-120b-a12b:free"],
   provider: {
     sort: {
       by: "price",
