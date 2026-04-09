@@ -13,4 +13,4 @@ def extract_frames(video_path, output_folder, fps=1):
     ]
     subprocess.run(cmd, capture_output=True, text=True)
     return [f for f in os.listdir(output_folder) if f.endswith(".jpg")]
-    
+
