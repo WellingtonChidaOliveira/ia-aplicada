@@ -29,10 +29,11 @@ def build_clip(state: GraphMessage) -> GraphMessage:
     filtro_video = ",".join(
         [
             # 1. corte vertical com padding
+            "transpose=1",
             "scale=1080:1920:force_original_aspect_ratio=decrease",
             "pad=1080:1920:(ow-iw)/2:(oh-ih)/2:black",
             # 2. curva cinematográfica — levanta blacks, achata highlights
-            "curves=all='0/15 0.85/220 1/235'",
+            "curves=all='0/0.06 0.85/0.86 1/0.92'",
             # 3. shift teal nas sombras
             "colorbalance=bs=-0.1:gs=0.05:rs=-0.15",
             # 4. contraste alto, saturação baixa
