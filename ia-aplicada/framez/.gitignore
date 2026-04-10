@@ -1,0 +1,39 @@
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS Data
+.DS_Store
+
+# Logs
+logs/
+*.log
+
+# LangChain / LangGraph / Vector Stores / Data
+.chroma/
+chroma_db/
+lancedb/
+.faiss/
+*.sqlite3
+*.db
+.langchain.db
+messages.db
+
+# Notebooks
+.ipynb_checkpoints

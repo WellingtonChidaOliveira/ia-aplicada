@@ -1,0 +1,7 @@
+{
+  "graphs": {
+    "dark-motivation": "./main.py:graph"
+  },
+  "dependencies": ["."],
+  "env": ".env"
+}
