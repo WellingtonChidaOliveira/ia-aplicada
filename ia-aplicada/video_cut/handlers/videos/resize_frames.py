@@ -9,6 +9,7 @@ def resize_frames(frames_path, output_folder, size=(1280, 720)):
         if frame.endswith(".jpg"):
             cmd = [
                 "ffmpeg",
+                "-y",
                 "-i", f"{frames_path}/{frame}",
                 "-vf", f"scale={size[0]}:{size[1]}",
                 f"{output_folder}/{frame}"

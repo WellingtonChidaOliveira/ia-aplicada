@@ -6,6 +6,8 @@ __pycache__/
 # C extensions
 *.so
 
+plano_v2_full_python.md
+
 # Distribution / packaging
 .Python
 build/
