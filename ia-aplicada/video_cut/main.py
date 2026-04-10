@@ -17,7 +17,7 @@ duration, fps = get_video_duration.get_video_duration(streams)
 print(f"Duration: {duration}, FPS: {fps}")
 
 try:
-    frames = extract_frames.extract_frames(video_path, frames_path, fps=1)
+    frames = extract_frames.extract_frames(video_path, frames_path, fps)
     print(f"Frames extracted: {len(frames)}")
 
     resize_frames.resize_frames(frames_path, frames_path, size=(1280, 720))
