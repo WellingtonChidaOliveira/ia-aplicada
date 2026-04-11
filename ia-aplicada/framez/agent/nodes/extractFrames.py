@@ -3,13 +3,21 @@ import os
 from models.GraphMessage import GraphMessage
 
 
+def calcular_max_frames(duration: float) -> int:
+    """
+    Quantidade de frames a amostrar baseada na duração.
+    Lógica: 1 frame a cada ~6s, mínimo 8, máximo 20.
+    """
+    calculado = int(duration / 6)
+    return max(8, min(calculado, 20))
+
+
 def extract_frames(state: GraphMessage) -> GraphMessage:
     frames_dir = f"./tmp/gym_frames_{os.getpid()}"
     os.makedirs(frames_dir, exist_ok=True)
 
     duration = state.get("duration")
-    # max_frames = 8
-    max_frames = len(state.get("frames"))
+    max_frames = calcular_max_frames(duration)
 
     start = 2.0
     end = duration - 2.0

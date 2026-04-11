@@ -10,6 +10,7 @@ class GraphMessage(MessagesState):
     # video_info: dict
     duration: float
     fps: float
+    total_frames: int = 0
     frames_dir: str = ""
     frames: list[str] = []
     analysis: str = ""

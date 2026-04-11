@@ -1,6 +1,7 @@
 import subprocess
 import os
 import time
+import textwrap
 from models.GraphMessage import GraphMessage
 
 
@@ -14,24 +15,21 @@ def build_clip(state: GraphMessage) -> GraphMessage:
     output_path = os.path.join(output_dir, f"{timestamp}_{video_name}_dark.mp4")
 
     duration = state.get("end_time") - state.get("start_time")
-    phrase = state.get("motivation_phrase")
+    raw_phrase = state.get("motivation_phrase").replace("'", "").replace('"', '')
 
-    # quebra a frase se for muito longa
-    if len(phrase) > 40:
-        meio = len(phrase) // 2
-        espaco = phrase.rfind(" ", 0, meio)
-        if espaco != -1:
-            phrase = phrase[:espaco] + "\n" + phrase[espaco + 1 :]
-
-    # tamanho da fonte proporcional ao comprimento
-    font_size = 60 if len(state.get("motivation_phrase")) <= 30 else 48
+    # quebra a frase para ficar com estilo de legenda (aprox 25 caracteres por linha)
+    wrapped_lines = textwrap.wrap(raw_phrase, width=25)
+    
+    # salva texto num arquivo para evitar problemas de escape no ffmpeg
+    text_file_path = os.path.join(output_dir, f"{timestamp}_text.txt")
+    with open(text_file_path, "w", encoding="utf-8") as f:
+        f.write("\n".join(wrapped_lines))
 
     filtro_video = ",".join(
         [
-            # 1. corte vertical com padding
-            "transpose=1",
-            "scale=1080:1920:force_original_aspect_ratio=decrease",
-            "pad=1080:1920:(ow-iw)/2:(oh-ih)/2:black",
+            # 1. corte vertical (preenche tela e recorta as laterais)
+            "scale=1080:1920:force_original_aspect_ratio=increase",
+            "crop=1080:1920",
             # 2. curva cinematográfica — levanta blacks, achata highlights
             "curves=all='0/0.06 0.85/0.86 1/0.92'",
             # 3. shift teal nas sombras
@@ -40,15 +38,17 @@ def build_clip(state: GraphMessage) -> GraphMessage:
             "eq=contrast=1.4:saturation=0.65:brightness=-0.05",
             # 5. vinheta nas bordas
             "vignette=angle=PI/5",
-            # 6. overlay da frase com fade in/out
+            # 6. overlay da frase com fade in/out + estilo dark (box, shadows)
             (
-                f"drawtext=text='{phrase}'"
-                f":fontsize={font_size}"
-                f":fontcolor=white"
-                f":bordercolor=black"
-                f":borderw=4"
+                f"drawtext=textfile='{text_file_path}'"
+                f":fontsize=52"
+                f":fontcolor=white@0.9"
+                f":bordercolor=black@0.9:borderw=3"
+                f":shadowcolor=black@0.8:shadowx=4:shadowy=4"
+                f":box=1:boxcolor=black@0.4:boxborderw=20"
+                f":line_spacing=20"
                 f":x=(w-text_w)/2"
-                f":y=h*0.80"
+                f":y=(h-text_h)*0.75"
                 f":alpha='if(lt(t,0.5),t/0.5,if(gt(t,{duration:.2f}-0.5),({duration:.2f}-t)/0.5,1))'"
             ),
         ]
@@ -105,6 +105,12 @@ def build_clip(state: GraphMessage) -> GraphMessage:
 
     tamanho_mb = os.path.getsize(output_path) / (1024 * 1024)
     print(f"Clipe gerado com sucesso: {tamanho_mb:.1f}MB")
+
+    if os.path.exists(text_file_path):
+        try:
+            os.remove(text_file_path)
+        except Exception:
+            pass
 
     return {
         "success": True,
