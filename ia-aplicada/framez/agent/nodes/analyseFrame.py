@@ -1,4 +1,5 @@
-import ollama
+from agent.prompts.v1.imagePrompt import image_prompt
+from service.ollama import send_image_ollama
 import base64
 import os
 import time
@@ -24,24 +25,9 @@ def analise_frame(
 
     for tentativa in range(1, retries + 1):
         try:
-            response = ollama.chat(
-                model="qwen3-vl:8b",
-                stream=False,
-                messages=[
-                    {
-                        "role": "user",
-                        "content": (
-                            f"Frame {frame_num}/{total} ({timestamp_label}) de um vídeo de treino de musculação. "
-                            "Descreva em 2-3 linhas: nível de esforço (baixo/médio/alto), "
-                            "exercício ou posição, expressão do atleta."
-                        ),
-                        "images": [img_b64],
-                    }
-                ],
-                options={
-                    "temperature": 0.1,
-                    "num_predict": 256,
-                },
+            response = send_image_ollama(
+                img_b64,
+                image_prompt(frame_num, total, timestamp_label),
             )
             content = response.message.content.strip()
             if len(content) >= 30:

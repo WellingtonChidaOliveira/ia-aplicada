@@ -1,7 +1,11 @@
+from agent.prompts.v1.generatePhrase import generate_phrase_prompt
 from models.GraphMessage import GraphMessage
+from service.llmRouter import LLMClient
 
 
-def generate_phrase(state: GraphMessage) -> GraphMessage:
-    return {
-        "motivation_phrase": "Eu prefiro o silencio daqui Estou cansado da Terra dessas pessoas cansado de me envolver nos conflitos de suas vidas"
-    }
+def generate_phrase(state: GraphMessage, client: LLMClient) -> GraphMessage:
+    response = client.llm_router(
+        generate_phrase_prompt(),
+    )
+
+    return {"motivation_phrase": response.strip()}

@@ -1,3 +1,4 @@
+from agent.nodes.discardInvoke import discard_invoke
 from langgraph.graph import StateGraph, START, END
 from models.GraphMessage import GraphMessage
 from agent.nodes.getVideo import get_video_frames
@@ -6,22 +7,43 @@ from agent.nodes.analyseFrame import analyse_frames
 from agent.nodes.decideSegment import decide_segment
 from agent.nodes.generatePhrase import generate_phrase
 from agent.nodes.buildClip import build_clip
+from service.llmRouter import LLMClient
 
 
-def start_graph(path: str):
+def start_graph(path: str, client: LLMClient):
     graph = StateGraph(GraphMessage)
 
     def get_video_info_node(state: GraphMessage):
         return get_video_frames(path)
 
-    graph.add_node("get_video_frames", get_video_info_node)
-    graph.add_node("extract_frames", lambda s: extract_frames(s))
-    graph.add_node("analyse_frames", lambda s: analyse_frames(s))
-    graph.add_node("decide_segment", lambda s: decide_segment(s))
-    graph.add_node("generate_phrase", lambda s: generate_phrase(s))
-    graph.add_node("build_clip", lambda s: build_clip(s))
+    def decide_segment_node(state: GraphMessage):
+        return decide_segment(state, client)
 
-    graph.add_edge(START, "get_video_frames")
+    def generate_phrase_node(state: GraphMessage):
+        return generate_phrase(state, client)
+
+    graph.add_node("discard_invoke", discard_invoke)
+    graph.add_node("get_video_frames", get_video_info_node)
+    graph.add_node("extract_frames", extract_frames)
+    graph.add_node("analyse_frames", analyse_frames)
+    graph.add_node("decide_segment", decide_segment_node)
+    graph.add_node("generate_phrase", generate_phrase_node)
+    graph.add_node("build_clip", build_clip)
+
+    graph.add_conditional_edges(
+        "discard_invoke",
+        lambda state: (
+            "skip"
+            if state.get("messages")[-1].content == "skip message"
+            else "continue"
+        ),
+        {
+            "skip": END,
+            "continue": "get_video_frames",
+        },
+    )
+
+    graph.add_edge(START, "discard_invoke")
     graph.add_edge("get_video_frames", "extract_frames")
     graph.add_edge("extract_frames", "analyse_frames")
     graph.add_edge("analyse_frames", "decide_segment")

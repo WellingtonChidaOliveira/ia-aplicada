@@ -1,41 +1,19 @@
-import ollama
+from service.llmRouter import LLMClient
+from agent.prompts.v1.decidePrompt import decide_prompt
 import json
 import re
 from models.GraphMessage import GraphMessage
 
 
-def decide_segment(state: GraphMessage) -> GraphMessage:
+def decide_segment(state: GraphMessage, client: LLMClient) -> GraphMessage:
     duration = state.get("duration")
 
-    prompt = f"""Você analisou {len(state.get("frames"))} frames de um vídeo de treino de musculação com duração total de {duration:.1f} segundos.
-
-Aqui está a análise de cada frame:
-
-{state.get("analysis")}
-
-Com base nessa análise, escolha o melhor trecho para um clipe de academia estilo TikTok.
-Critérios: maior intensidade de esforço, boa expressão do atleta, qualidade visual.
-O trecho deve ter entre 20 e 45 segundos.
-Os timestamps disponíveis vão de 2.00s até {duration - 2:.1f}s.
-
-Responda APENAS com JSON válido, sem texto antes ou depois:
-{{
-  "start_time": <float>,
-  "end_time": <float>,
-  "reason": "<motivo em uma frase>"
-}}"""
-
-    response = ollama.chat(
-        model="qwen3-vl:8b",
-        stream=False,
-        messages=[{"role": "user", "content": prompt}],
-        options={
-            "temperature": 0.1,
-            "num_predict": 256,
-        },
+    response = client.llm_router(
+        decide_prompt(duration, state.get("analysis"), len(state.get("frames"))),
+        options={"temperature": 0.1},
     )
 
-    content = response.message.content.strip()
+    content = response.strip()
     print(f"Decisão do modelo:\n{content}")
 
     start_time, end_time = _parse_segment(content, duration)

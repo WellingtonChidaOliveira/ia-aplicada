@@ -8,7 +8,8 @@ def extract_frames(state: GraphMessage) -> GraphMessage:
     os.makedirs(frames_dir, exist_ok=True)
 
     duration = state.get("duration")
-    max_frames = 8
+    # max_frames = 8
+    max_frames = len(state.get("frames"))
 
     start = 2.0
     end = duration - 2.0
