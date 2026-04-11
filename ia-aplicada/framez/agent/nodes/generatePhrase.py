@@ -1,4 +1,4 @@
-from agent.prompts.v1.generatePhrase import generate_phrase_prompt
+from agent.prompts.v2.generatePhrase import generate_phrase_prompt
 from models.GraphMessage import GraphMessage
 from service.llmRouter import LLMClient
 

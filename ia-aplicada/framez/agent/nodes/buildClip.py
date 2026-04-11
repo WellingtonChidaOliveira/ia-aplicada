@@ -15,11 +15,10 @@ def build_clip(state: GraphMessage) -> GraphMessage:
     output_path = os.path.join(output_dir, f"{timestamp}_{video_name}_dark.mp4")
 
     duration = state.get("end_time") - state.get("start_time")
-    raw_phrase = state.get("motivation_phrase").replace("'", "").replace('"', '')
+    raw_phrase = state.get("motivation_phrase").replace("'", "").replace('"', "")
 
     # quebra a frase para ficar com estilo de legenda (aprox 25 caracteres por linha)
-    wrapped_lines = textwrap.wrap(raw_phrase, width=25)
-    
+    wrapped_lines = textwrap.wrap(raw_phrase, width=27)
     # salva texto num arquivo para evitar problemas de escape no ffmpeg
     text_file_path = os.path.join(output_dir, f"{timestamp}_text.txt")
     with open(text_file_path, "w", encoding="utf-8") as f:
@@ -41,12 +40,11 @@ def build_clip(state: GraphMessage) -> GraphMessage:
             # 6. overlay da frase com fade in/out + estilo dark (box, shadows)
             (
                 f"drawtext=textfile='{text_file_path}'"
-                f":fontsize=52"
-                f":fontcolor=white@0.9"
-                f":bordercolor=black@0.9:borderw=3"
-                f":shadowcolor=black@0.8:shadowx=4:shadowy=4"
-                f":box=1:boxcolor=black@0.4:boxborderw=20"
-                f":line_spacing=20"
+                f":fontsize=72"
+                f":fontcolor=white"
+                f":bordercolor=black:borderw=5"
+                f":shadowcolor=black@0.9:shadowx=3:shadowy=3"
+                f":line_spacing=16"
                 f":x=(w-text_w)/2"
                 f":y=(h-text_h)*0.75"
                 f":alpha='if(lt(t,0.5),t/0.5,if(gt(t,{duration:.2f}-0.5),({duration:.2f}-t)/0.5,1))'"
