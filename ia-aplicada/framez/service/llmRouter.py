@@ -9,7 +9,7 @@ class LLMClient:
             api_key=Config.OPENROUTER_API_KEY,
         )
 
-    def llm_router(self, prompt: str, options: dict = None, images: list = None):
+    def llm_router(self, prompt: str, options: dict = None):
         if options is None:
             options = {}
 

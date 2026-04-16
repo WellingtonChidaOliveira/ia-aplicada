@@ -3,24 +3,93 @@ import os
 import time
 import textwrap
 from models.GraphMessage import GraphMessage
+from agent.prompts.v2.generatePhrase import generate_phrase_prompt
+from service.llmRouter import LLMClient
 
 
-def build_clip(state: GraphMessage) -> GraphMessage:
+def build_clip(state: GraphMessage, client: LLMClient) -> GraphMessage:
     output_dir = "output"
     os.makedirs(output_dir, exist_ok=True)
 
-    # nome do arquivo de saída
+    segments = state.get("segments") or []
     video_name = os.path.splitext(os.path.basename(state.get("video_path")))[0]
-    timestamp = int(time.time())
-    output_path = os.path.join(output_dir, f"{timestamp}_{video_name}_dark.mp4")
+    base_timestamp = int(time.time())
 
-    duration = state.get("end_time") - state.get("start_time")
-    raw_phrase = state.get("motivation_phrase").replace("'", "").replace('"', "")
+    output_paths = []
+    errors = []
 
-    # quebra a frase para ficar com estilo de legenda (aprox 25 caracteres por linha)
+    for seg in segments:
+        rank = seg.get("rank", len(output_paths) + 1)
+        start_time = seg["start_time"]
+        end_time = seg["end_time"]
+        duration = end_time - start_time
+
+        print(f"\n── Gerando clipe top{rank} ─────────────────────────────")
+        print(f"   Trecho: {start_time:.2f}s → {end_time:.2f}s ({duration:.1f}s)")
+        print(f"   Motivo: {seg.get('reason', '')}")
+
+        # gera frase motivacional individual para este clipe
+        phrase = _gerar_frase(client)
+        print(f"   Frase: {phrase}")
+
+        output_path = os.path.join(
+            output_dir, f"{base_timestamp}_{video_name}_top{rank}.mp4"
+        )
+
+        result = _render_clip(
+            video_path=state.get("video_path"),
+            start_time=start_time,
+            duration=duration,
+            phrase=phrase,
+            output_path=output_path,
+            output_dir=output_dir,
+            base_timestamp=base_timestamp,
+            rank=rank,
+        )
+
+        if result["success"]:
+            tamanho_mb = os.path.getsize(output_path) / (1024 * 1024)
+            print(f"   ✓ Salvo em: {output_path} ({tamanho_mb:.1f}MB)")
+            output_paths.append(output_path)
+        else:
+            print(f"   ✗ Erro no top{rank}: {result['error'][:200]}")
+            errors.append(result["error"])
+
+    print(f"\n══ {len(output_paths)}/3 clipes gerados com sucesso ══")
+
+    return {
+        "success": len(output_paths) > 0,
+        "output_paths": output_paths,
+        "output_path": output_paths[0] if output_paths else "",
+        "error": "; ".join(errors) if errors else "",
+    }
+
+
+def _gerar_frase(client: LLMClient) -> str:
+    """Chama o LLM para gerar uma frase motivacional única."""
+    try:
+        response = client.llm_router(generate_phrase_prompt())
+        return response.strip()
+    except Exception as e:
+        print(f"   Falha ao gerar frase: {e}")
+        return "O peso que carregas é a prova de que ainda és real."
+
+
+def _render_clip(
+    video_path: str,
+    start_time: float,
+    duration: float,
+    phrase: str,
+    output_path: str,
+    output_dir: str,
+    base_timestamp: int,
+    rank: int,
+) -> dict:
+    """Monta e executa o comando FFmpeg para renderizar um único clipe."""
+    raw_phrase = phrase.replace("'", "").replace('"', "")
     wrapped_lines = textwrap.wrap(raw_phrase, width=27)
-    # salva texto num arquivo para evitar problemas de escape no ffmpeg
-    text_file_path = os.path.join(output_dir, f"{timestamp}_text.txt")
+    text_file_path = os.path.join(output_dir, f"{base_timestamp}_top{rank}_text.txt")
+
     with open(text_file_path, "w", encoding="utf-8") as f:
         f.write("\n".join(wrapped_lines))
 
@@ -54,63 +123,33 @@ def build_clip(state: GraphMessage) -> GraphMessage:
 
     cmd = [
         "ffmpeg",
-        "-ss",
-        str(state.get("start_time")),
-        "-i",
-        state.get("video_path"),
-        "-t",
-        str(duration),
-        "-vf",
-        filtro_video,
-        "-c:v",
-        "libx264",
-        "-preset",
-        "fast",
-        "-crf",
-        "23",
-        "-c:a",
-        "aac",
-        "-b:a",
-        "128k",
-        "-movflags",
-        "+faststart",
+        "-ss", str(start_time),
+        "-i", video_path,
+        "-t", str(duration),
+        "-vf", filtro_video,
+        "-c:v", "libx264",
+        "-preset", "fast",
+        "-crf", "23",
+        "-c:a", "aac",
+        "-b:a", "128k",
+        "-movflags", "+faststart",
         output_path,
         "-y",
     ]
 
-    print(
-        f"Gerando clipe: {state.get('start_time'):.2f}s → {state.get('end_time'):.2f}s ({duration:.1f}s)"
-    )
-    print(f"Frase: {state.get('motivation_phrase')}")
-    print(f"Output: {output_path}")
-
     result = subprocess.run(cmd, capture_output=True, text=True)
 
+    # limpa arquivo de texto temporário
+    try:
+        os.remove(text_file_path)
+    except Exception:
+        pass
+
     if result.returncode != 0:
-        print(f"FFmpeg erro:\n{result.stderr}")
-        return {
-            "success": False,
-            "error": result.stderr[-500:],
-            "output_path": "",
-        }
+        return {"success": False, "error": result.stderr[-500:]}
 
     if not os.path.exists(output_path) or os.path.getsize(output_path) == 0:
-        return {
-            "success": False,
-            "error": "Arquivo de saída não foi gerado",
-            "output_path": "",
-        }
+        return {"success": False, "error": "Arquivo de saída não foi gerado"}
 
-    tamanho_mb = os.path.getsize(output_path) / (1024 * 1024)
-    print(f"Clipe gerado com sucesso: {tamanho_mb:.1f}MB")
+    return {"success": True, "error": ""}
 
-    if os.path.exists(text_file_path):
-        try:
-            os.remove(text_file_path)
-        except Exception:
-            pass
-
-    return {
-        "success": True,
-        "output_path": output_path,
-    }

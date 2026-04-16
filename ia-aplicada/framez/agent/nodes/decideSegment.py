@@ -4,6 +4,8 @@ import json
 import re
 from models.GraphMessage import GraphMessage
 
+TOP_N = 3
+
 
 def decide_segment(state: GraphMessage, client: LLMClient) -> GraphMessage:
     duration = state.get("duration")
@@ -16,35 +18,53 @@ def decide_segment(state: GraphMessage, client: LLMClient) -> GraphMessage:
     content = response.strip()
     print(f"Decisão do modelo:\n{content}")
 
-    start_time, end_time = _parse_segment(content, duration)
-    print(
-        f"Trecho escolhido: {start_time:.2f}s → {end_time:.2f}s ({end_time - start_time:.1f}s)"
-    )
-    return {"start_time": start_time, "end_time": end_time}
+    segments = _parse_segments(content, duration)
+
+    for i, seg in enumerate(segments, start=1):
+        print(
+            f"  Top {i}: {seg['start_time']:.2f}s → {seg['end_time']:.2f}s "
+            f"({seg['end_time'] - seg['start_time']:.1f}s) — {seg.get('reason', '')}"
+        )
+
+    return {"segments": segments}
 
 
-def _parse_segment(content: str, duration: float):
-    """Extrai start_time e end_time do JSON retornado pelo modelo.
-    Se falhar, retorna o trecho central do vídeo como fallback."""
+def _parse_segments(content: str, duration: float) -> list[dict]:
+    """Extrai até TOP_N segmentos do JSON retornado pelo modelo.
+    Valida cada trecho; preenche com fallbacks se necessário."""
 
+    parsed = []
     try:
-        # tenta extrair JSON mesmo se vier com texto ao redor
-        match = re.search(r"\{.*?\}", content, re.DOTALL)
+        match = re.search(r"\{.*\}", content, re.DOTALL)
         if match:
             data = json.loads(match.group())
-            start = float(data["start_time"])
-            end = float(data["end_time"])
-            return _validar_trecho(start, end, duration)
+            trechos = data.get("trechos", [])
+            for item in trechos[:TOP_N]:
+                start = float(item["start_time"])
+                end = float(item["end_time"])
+                start, end = _validar_trecho(start, end, duration)
+                parsed.append(
+                    {
+                        "rank": item.get("rank", len(parsed) + 1),
+                        "start_time": start,
+                        "end_time": end,
+                        "reason": item.get("reason", ""),
+                    }
+                )
     except Exception as e:
         print(f"  Falha ao parsear JSON: {e}")
 
-    # fallback: trecho central
-    print("  Usando fallback: trecho central do vídeo")
-    return _trecho_central(duration)
+    # preenche com fallbacks caso o modelo tenha retornado menos de TOP_N
+    if len(parsed) < TOP_N:
+        print(f"  Modelo retornou {len(parsed)} trecho(s); completando com fallbacks...")
+        fallbacks = _gerar_fallbacks(duration, TOP_N - len(parsed), parsed)
+        parsed.extend(fallbacks)
+
+    return parsed[:TOP_N]
 
 
 def _validar_trecho(start: float, end: float, duration: float):
-    """Garante que o trecho está dentro dos limites e tem duração válida."""
+    """Garante que o trecho está dentro dos limites e tem duração válida (20–45s)."""
     start = max(0.0, min(start, duration - 20))
     end = min(duration, max(end, start + 20))
 
@@ -57,9 +77,36 @@ def _validar_trecho(start: float, end: float, duration: float):
     return round(start, 2), round(end, 2)
 
 
-def _trecho_central(duration: float):
-    """Retorna um trecho de 30s centralizado no vídeo."""
-    meio = duration / 2
-    start = max(0.0, meio - 15)
-    end = start + 30
-    return round(start, 2), round(end, 2)
+def _gerar_fallbacks(duration: float, n: int, existing: list[dict]) -> list[dict]:
+    """Gera n trechos de 30s espaçados uniformemente no vídeo,
+    evitando sobreposição com trechos já existentes."""
+    fallbacks = []
+    # divide o vídeo em n+1+len(existing) fatias e pega pontos intermediários
+    total_points = n + len(existing) + 1
+    step = duration / total_points
+
+    existing_starts = {seg["start_time"] for seg in existing}
+    rank = len(existing) + 1
+
+    for i in range(1, total_points):
+        if len(fallbacks) >= n:
+            break
+        candidate_start = round(i * step, 2)
+        # evita sobreposição grosseira com os já existentes
+        if any(abs(candidate_start - es) < 20 for es in existing_starts):
+            continue
+        candidate_start = max(0.0, min(candidate_start, duration - 30))
+        candidate_end = round(candidate_start + 30, 2)
+        fallbacks.append(
+            {
+                "rank": rank,
+                "start_time": candidate_start,
+                "end_time": candidate_end,
+                "reason": "fallback automático",
+            }
+        )
+        existing_starts.add(candidate_start)
+        rank += 1
+
+    return fallbacks
+
