@@ -3,9 +3,9 @@ import os
 import time
 import textwrap
 from models.GraphMessage import GraphMessage
-from agent.prompts.v1.generatePhrase import generate_phrase_prompt
+from agent.prompts.v3.generatePhrase import generate_phrase_prompt
 from service.llmRouter import LLMClient
-from config.config import Config
+from service.ollama import send_text_ollama
 
 
 def build_clip(state: GraphMessage, client: LLMClient) -> GraphMessage:
@@ -70,72 +70,11 @@ def build_clip(state: GraphMessage, client: LLMClient) -> GraphMessage:
 def _gerar_frase(client: LLMClient) -> str:
     """Chama o LLM para gerar uma frase motivacional única."""
     try:
-        response = client.llm_router(
-            generate_phrase_prompt(), model=Config.MODEL_LLM_PHRASE
-        )
+        response = send_text_ollama(generate_phrase_prompt())
         return response.strip()
     except Exception as e:
         print(f"   Falha ao gerar frase: {e}")
         return "O peso que carregas é a prova de que ainda és real."
-
-
-def _build_filtro_c(text_file_path: str, duration: float) -> str:
-    fade_duration = 0.6
-
-    filtros = [
-        # 1. corte vertical
-        "scale=1080:1920:force_original_aspect_ratio=increase",
-        "crop=1080:1920",
-        # 2. filtro dark Knight
-        "eq=brightness=-0.15:contrast=1.0:saturation=0.5:gamma=0.85",
-        "curves=r='0/0 0.5/0.38 1/0.85':g='0/0 0.5/0.40 1/0.88':b='0/0.04 0.5/0.48 1/0.95'",
-        "colorbalance=rs=-0.25:gs=0.0:bs=0.15:rm=-0.1:gm=0.0:bm=0.05",
-        "eq=contrast=1.35:saturation=0.55:brightness=0.0",
-        "vignette=angle=PI/4:mode=forward",
-    ]
-
-    return ",".join(filtros)
-
-
-def _build_filter_complex_c(text_file_path: str, duration: float) -> str:
-    """Opção C: gradiente escuro na base + texto integrado."""
-    fade_duration = 0.6
-    # gradiente ocupa 40% inferior da tela (768px de 1920)
-    gradient_height = 768
-
-    return (
-        # processa o vídeo com filtro dark
-        f"[1:v]"
-        f"scale=1080:1920:force_original_aspect_ratio=increase,"
-        f"crop=1080:1920,"
-        f"eq=brightness=-0.15:contrast=1.0:saturation=0.5:gamma=0.85,"
-        f"curves=r='0/0 0.5/0.38 1/0.85':g='0/0 0.5/0.40 1/0.88':b='0/0.04 0.5/0.48 1/0.95',"
-        f"colorbalance=rs=-0.25:gs=0.0:bs=0.15:rm=-0.1:gm=0.0:bm=0.05,"
-        f"eq=contrast=1.35:saturation=0.55:brightness=0.0,"
-        f"vignette=angle=PI/4:mode=forward"
-        f"[vid];"
-        # gera gradiente preto transparente → preto sólido de baixo para cima
-        f"color=c=black:size=1080x{gradient_height}:rate=30[grad_base];"
-        f"[grad_base]"
-        f"geq=r=0:g=0:b=0:a='255*((Y)/{gradient_height})',"
-        f"format=yuva420p"
-        f"[grad];"
-        # posiciona o gradiente na base do vídeo
-        f"[vid][grad]overlay=x=0:y=1920-{gradient_height}[vid_grad];"
-        # adiciona o texto sobre o gradiente
-        f"[vid_grad]"
-        f"drawtext=textfile='{text_file_path}'"
-        f":fontsize=64"
-        f":fontcolor=white@0.95"
-        f":bordercolor=black:borderw=2"
-        f":shadowcolor=black@0.8:shadowx=2:shadowy=2"
-        f":line_spacing=20"
-        f":text_align=center"
-        f":x=(w-text_w)/2"
-        f":y=h*0.72"
-        f":alpha='if(lt(t\\,0.8)\\,t/0.8\\,if(gt(t\\,{duration - 0.8:.2f})\\,({duration:.2f}-t)/0.8\\,1))'"
-        f"[vout]"
-    )
 
 
 def _render_clip(
@@ -218,35 +157,50 @@ def _render_clip(
             "-y",
         ]
     elif style == "D":
-        # texto aparece após 1.5s do vídeo já rodando
-        text_start = 1.5
-        fade_duration = 0.8
+        blur_duration = 3.0
+        fade_duration = 0.6
+        text_fade = 0.8
+        max_blur = 15
 
-        filter_complex = (
-            f"[0:v]"
+        dark_filters = (
             f"scale=1080:1920:force_original_aspect_ratio=increase,"
             f"crop=1080:1920,"
             f"eq=brightness=-0.15:contrast=1.0:saturation=0.5:gamma=0.85,"
             f"curves=r='0/0 0.5/0.38 1/0.85':g='0/0 0.5/0.40 1/0.88':b='0/0.04 0.5/0.48 1/0.95',"
             f"colorbalance=rs=-0.25:gs=0.0:bs=0.15:rm=-0.1:gm=0.0:bm=0.05,"
             f"eq=contrast=1.35:saturation=0.55:brightness=0.0,"
-            f"vignette=angle=PI/4:mode=forward,"
-            f"drawtext=textfile='{text_file_path}'"
-            f":fontsize=64"
-            f":fontcolor=white@0.95"
-            f":bordercolor=black:borderw=3"
-            f":shadowcolor=black@0.95:shadowx=3:shadowy=3"
-            f":line_spacing=20"
-            f":text_align=center"
-            f":x=(w-text_w)/2"
-            f":y=(h-text_h)*0.72"
-            # aparece após text_start segundos, some nos últimos 0.8s
-            f":enable='gte(t\\,{text_start})'"
-            f":alpha='if(lt(t\\,{text_start + fade_duration:.2f})\\,"
-            f"(t-{text_start:.2f})/{fade_duration}\\,"
-            f"if(gt(t\\,{duration - fade_duration:.2f})\\,"
-            f"({duration:.2f}-t)/{fade_duration}\\,1))'"
-            f"[vout]"
+            f"vignette=angle=PI/4:mode=forward"
+        )
+
+        def drawtext(alpha_expr):
+            return (
+                f"drawtext=textfile='{text_file_path}'"
+                f":fontsize=64:fontcolor=white@0.95"
+                f":bordercolor=black:borderw=3"
+                f":shadowcolor=black@0.95:shadowx=3:shadowy=3"
+                f":line_spacing=20:text_align=center"
+                f":x=(w-text_w)/2:y=(h-text_h)*0.72"
+                f":alpha='{alpha_expr}'"
+            )
+
+        sharp_duration = duration - blur_duration
+
+        filter_complex = (
+            # TRECHO COM BLUR: primeiros blur_duration segundos
+            f"[0:v]trim=start=0:end={blur_duration:.1f},setpts=PTS-STARTPTS,"
+            f"{dark_filters},"
+            f"boxblur={max_blur}:{max_blur},"
+            f"{drawtext(f'if(lt(t\\,{text_fade})\\,t/{text_fade}\\,1)')},"
+            f"fade=t=out:st={blur_duration - fade_duration:.2f}:d={fade_duration}"
+            f"[blurred];"
+            # TRECHO NÍTIDO: resto do vídeo
+            f"[0:v]trim=start={blur_duration:.1f},setpts=PTS-STARTPTS,"
+            f"{dark_filters},"
+            f"{drawtext(f'if(gt(t\\,{sharp_duration - text_fade:.2f})\\,({sharp_duration:.2f}-t)/{text_fade}\\,1)')},"
+            f"fade=t=in:st=0:d={fade_duration}"
+            f"[sharp];"
+            # CONCAT
+            f"[blurred][sharp]concat=n=2:v=1:a=0[vout]"
         )
 
         cmd = [
@@ -263,45 +217,6 @@ def _render_clip(
             "[vout]",
             "-map",
             "0:a?",
-            "-c:v",
-            "libx264",
-            "-preset",
-            "fast",
-            "-crf",
-            "23",
-            "-c:a",
-            "aac",
-            "-b:a",
-            "128k",
-            "-movflags",
-            "+faststart",
-            output_path,
-            "-y",
-        ]
-
-    else:  # style == "C"
-        gradient_height = 768
-
-        filter_complex = _build_filter_complex_c(text_file_path, duration)
-
-        cmd = [
-            "ffmpeg",
-            "-f",
-            "lavfi",
-            "-i",
-            f"color=c=black:size=1080x{gradient_height}:rate=30",
-            "-ss",
-            str(start_time),
-            "-i",
-            video_path,
-            "-t",
-            str(duration),
-            "-filter_complex",
-            filter_complex,
-            "-map",
-            "[vout]",
-            "-map",
-            "1:a?",
             "-c:v",
             "libx264",
             "-preset",

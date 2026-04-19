@@ -10,9 +10,9 @@ class TestGeneratePhrase(unittest.TestCase):
     def test_generate_phrase(self):
         rsp = self.client.llm_router(
             generate_phrase_prompt(),
-            # options={
-            #     "temperature": 1.2,
-            # },
+            options={
+                "temperature": 1.2,
+            },
         )
         print(rsp)
         self.assertIsInstance(rsp, str)

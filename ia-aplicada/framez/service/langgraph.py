@@ -9,17 +9,20 @@ from agent.nodes.buildClip import build_clip
 from service.llmRouter import LLMClient
 
 
-def start_graph(path: str, client: LLMClient):
+def start_graph(path: str | None = None, client: LLMClient | None = None):
     graph = StateGraph(GraphMessage)
 
     def get_video_info_node(state: GraphMessage):
-        return get_video_frames(path)
+        p = path or state.get("video_path")
+        return get_video_frames(p)
 
     def decide_segment_node(state: GraphMessage):
-        return decide_segment(state, client)
+        c = client or LLMClient()
+        return decide_segment(state, c)
 
     def build_clip_node(state: GraphMessage):
-        return build_clip(state, client)
+        c = client or LLMClient()
+        return build_clip(state, c)
 
     graph.add_node("discard_invoke", discard_invoke)
     graph.add_node("get_video_frames", get_video_info_node)
@@ -49,4 +52,3 @@ def start_graph(path: str, client: LLMClient):
     graph.add_edge("build_clip", END)
 
     return graph.compile()
-

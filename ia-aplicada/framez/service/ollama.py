@@ -23,13 +23,12 @@ def send_image_ollama(img_b64: str, prompt: str):
 
 def send_text_ollama(prompt: str):
     response = ollama.chat(
-        model="qwen3-vl:8b",
+        model="kimi-k2.5:cloud",
         stream=False,
         messages=[{"role": "user", "content": prompt}],
         options={
-            "temperature": 0.1,
-            "num_predict": 256,
+            "temperature": 1.2,
         },
     )
 
-    return response
+    return response.message.content

@@ -1,6 +1,6 @@
 {
   "graphs": {
-    "dark-motivation": "./main.py:graph"
+    "dark-motivation": "./agent/factory.py:CreateGraph"
   },
   "dependencies": ["."],
   "env": ".env"
