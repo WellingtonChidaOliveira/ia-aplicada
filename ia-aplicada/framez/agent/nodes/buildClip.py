@@ -175,11 +175,15 @@ def _render_clip(
         def drawtext(alpha_expr):
             return (
                 f"drawtext=textfile='{text_file_path}'"
-                f":fontsize=64:fontcolor=white@0.95"
-                f":bordercolor=black:borderw=3"
-                f":shadowcolor=black@0.95:shadowx=3:shadowy=3"
-                f":line_spacing=20:text_align=center"
-                f":x=(w-text_w)/2:y=(h-text_h)*0.72"
+                f":fontfile='/home/wchida/.local/share/fonts/BebasNeue-Regular.ttf'"
+                f":fontsize=72"
+                f":fontcolor=white@0.95"
+                f":bordercolor=black:borderw=2"
+                f":shadowcolor=black@0.8:shadowx=4:shadowy=4"
+                f":line_spacing=12"
+                f":text_align=center"
+                f":x=(w-text_w)/2"
+                f":y=h*0.78"
                 f":alpha='{alpha_expr}'"
             )
 

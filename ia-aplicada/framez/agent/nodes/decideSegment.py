@@ -1,3 +1,4 @@
+from service import ollama
 from service.llmRouter import LLMClient
 from agent.prompts.v1.decidePrompt import decide_prompt
 import json
@@ -11,10 +12,8 @@ TOP_N = 3
 def decide_segment(state: GraphMessage, client: LLMClient) -> GraphMessage:
     duration = state.get("duration")
 
-    response = client.llm_router(
+    response = ollama.send_text_ollama(
         decide_prompt(duration, state.get("analysis"), len(state.get("frames"))),
-        model=Config.MODEL_LLM_DECIDE,
-        options={"temperature": 0.1},
     )
 
     content = response.strip()
