@@ -1,6 +1,6 @@
 import unittest
 from service.llmRouter import LLMClient
-from agent.prompts.v2.generatePhrase import generate_phrase_prompt
+from agent.prompts.v1.generatePhrase import generate_phrase_prompt
 
 
 class TestGeneratePhrase(unittest.TestCase):
@@ -8,7 +8,12 @@ class TestGeneratePhrase(unittest.TestCase):
         self.client = LLMClient()
 
     def test_generate_phrase(self):
-        rsp = self.client.llm_router(generate_phrase_prompt())
+        rsp = self.client.llm_router(
+            generate_phrase_prompt(),
+            # options={
+            #     "temperature": 1.2,
+            # },
+        )
         print(rsp)
         self.assertIsInstance(rsp, str)
         # self.assertLessEqual(len(rsp), 60)

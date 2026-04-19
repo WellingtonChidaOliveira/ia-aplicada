@@ -9,12 +9,12 @@ class LLMClient:
             api_key=Config.OPENROUTER_API_KEY,
         )
 
-    def llm_router(self, prompt: str, options: dict = None):
+    def llm_router(self, prompt: str, model: str, options: dict = None):
         if options is None:
             options = {}
 
         completions = self.client.chat.completions.create(
-            model=Config.MODEL_LLM,
+            model=model,
             messages=[{"role": "user", "content": prompt}],
             **options,
         )

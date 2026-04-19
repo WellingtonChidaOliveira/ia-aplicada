@@ -3,6 +3,7 @@ from agent.prompts.v1.decidePrompt import decide_prompt
 import json
 import re
 from models.GraphMessage import GraphMessage
+from config.config import Config
 
 TOP_N = 3
 
@@ -12,6 +13,7 @@ def decide_segment(state: GraphMessage, client: LLMClient) -> GraphMessage:
 
     response = client.llm_router(
         decide_prompt(duration, state.get("analysis"), len(state.get("frames"))),
+        model=Config.MODEL_LLM_DECIDE,
         options={"temperature": 0.1},
     )
 
@@ -56,7 +58,9 @@ def _parse_segments(content: str, duration: float) -> list[dict]:
 
     # preenche com fallbacks caso o modelo tenha retornado menos de TOP_N
     if len(parsed) < TOP_N:
-        print(f"  Modelo retornou {len(parsed)} trecho(s); completando com fallbacks...")
+        print(
+            f"  Modelo retornou {len(parsed)} trecho(s); completando com fallbacks..."
+        )
         fallbacks = _gerar_fallbacks(duration, TOP_N - len(parsed), parsed)
         parsed.extend(fallbacks)
 
@@ -109,4 +113,3 @@ def _gerar_fallbacks(duration: float, n: int, existing: list[dict]) -> list[dict
         rank += 1
 
     return fallbacks
-
