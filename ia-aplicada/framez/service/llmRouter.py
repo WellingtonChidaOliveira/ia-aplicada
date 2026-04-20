@@ -1,5 +1,5 @@
 from openai import OpenAI
-from config.config import Config
+from utils.config import Config
 
 
 class LLMClient:

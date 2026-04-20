@@ -14,16 +14,17 @@ class AgentFactory:
         if self.path is None:
             self.path = input("Enter the path to the video: ")
 
-        # self.path = Path.cwd() / "videos" / self.path / "tr.mp4"
-        self.path = Path("./videos/tr.mp4")
+        self.path = Path.cwd() / "videos" / self.path
+        # self.path = Path("./videos/tr.mp4")
         if not self.path.exists():
             self.msg = "skip"
             print(f"Video not found: {self.path}")
 
         client = LLMClient()
+        self.msg = "continue"
 
         graph = start_graph(self.path, client)
-        return graph
+        graph.invoke({"messages": [{"role": "user", "content": self.msg}]})
 
 
 # Top-level factory for LangGraph API/Studio.

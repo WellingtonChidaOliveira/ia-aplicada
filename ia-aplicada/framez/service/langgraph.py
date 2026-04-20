@@ -35,7 +35,7 @@ def start_graph(path: str | None = None, client: LLMClient | None = None):
         "discard_invoke",
         lambda state: (
             "skip"
-            if state.get("messages")[-1].content == "skip message"
+            if (state.get("messages") or []) and state.get("messages")[-1].content == "skip message"
             else "continue"
         ),
         {

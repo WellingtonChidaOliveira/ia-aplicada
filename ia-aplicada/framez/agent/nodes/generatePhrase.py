@@ -1,7 +1,7 @@
 from agent.prompts.v2.generatePhrase import generate_phrase_prompt
 from models.GraphMessage import GraphMessage
 from service.llmRouter import LLMClient
-from config.config import Config
+from utils.config import Config
 
 
 def generate_phrase(state: GraphMessage, client: LLMClient) -> GraphMessage:

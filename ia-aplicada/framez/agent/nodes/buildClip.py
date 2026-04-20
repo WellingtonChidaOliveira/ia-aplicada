@@ -6,6 +6,30 @@ from models.GraphMessage import GraphMessage
 from agent.prompts.v3.generatePhrase import generate_phrase_prompt
 from service.llmRouter import LLMClient
 from service.ollama import send_text_ollama
+from utils.config import Config
+from utils.filter_text import FilterText
+
+
+def _gerar_frase(client: LLMClient) -> str:
+    """Chama o LLM para gerar uma frase motivacional única."""
+    try:
+        # response = send_text_ollama(generate_phrase_prompt())
+        response = client.llm_router(
+            prompt=generate_phrase_prompt(),
+            model=Config.MODEL_LLM_PHRASE,
+            options={
+                "temperature": 1.2,
+                "top_p": 0.95,
+                "frequency_penalty": 1.0,  # penaliza repetição de tokens
+                "presence_penalty": 0.8,  # incentiva explorar novos temas
+            },
+        )
+        return response.strip()
+    except Exception as e:
+        print(f"   Falha ao gerar frase: {e}")
+        print("   Usando frase de fallback")
+        response = send_text_ollama(generate_phrase_prompt())
+        return response.strip()
 
 
 def build_clip(state: GraphMessage, client: LLMClient) -> GraphMessage:
@@ -46,7 +70,6 @@ def build_clip(state: GraphMessage, client: LLMClient) -> GraphMessage:
             output_dir=output_dir,
             base_timestamp=base_timestamp,
             rank=rank,
-            style="D",
         )
 
         if result["success"]:
@@ -67,16 +90,6 @@ def build_clip(state: GraphMessage, client: LLMClient) -> GraphMessage:
     }
 
 
-def _gerar_frase(client: LLMClient) -> str:
-    """Chama o LLM para gerar uma frase motivacional única."""
-    try:
-        response = send_text_ollama(generate_phrase_prompt())
-        return response.strip()
-    except Exception as e:
-        print(f"   Falha ao gerar frase: {e}")
-        return "O peso que carregas é a prova de que ainda és real."
-
-
 def _render_clip(
     video_path: str,
     start_time: float,
@@ -86,7 +99,6 @@ def _render_clip(
     output_dir: str,
     base_timestamp: int,
     rank: int,
-    style: str = "A",  # "A" = intro preta | "C" = gradiente
 ) -> dict:
     raw_phrase = phrase.replace("'", "").replace('"', "")
     wrapped_lines = textwrap.wrap(raw_phrase, width=27)
@@ -95,147 +107,36 @@ def _render_clip(
     with open(text_file_path, "w", encoding="utf-8") as f:
         f.write("\n".join(wrapped_lines))
 
-    if style == "A":
-        intro_duration = 3.0
-        fade_duration = 0.6
-
-        filter_complex = (
-            f"[0:v]"
-            f"drawtext=textfile='{text_file_path}'"
-            f":fontsize=64:fontcolor=white@0.95"
-            f":bordercolor=black:borderw=3"
-            f":shadowcolor=black@0.9:shadowx=2:shadowy=2"
-            f":line_spacing=20:text_align=center"
-            f":x=(w-text_w)/2:y=(h-text_h)/2"
-            f":alpha='if(lt(t\\,0.8)\\,t/0.8\\,if(gt(t\\,{intro_duration - 0.8:.2f})\\,({intro_duration:.2f}-t)/0.8\\,1))',"
-            f"fade=t=out:st={intro_duration - fade_duration:.2f}:d={fade_duration}"
-            f"[intro];"
-            f"[1:v]"
-            f"scale=1080:1920:force_original_aspect_ratio=increase,"
-            f"crop=1080:1920,"
-            f"eq=brightness=-0.15:contrast=1.0:saturation=0.5:gamma=0.85,"
-            f"curves=r='0/0 0.5/0.38 1/0.85':g='0/0 0.5/0.40 1/0.88':b='0/0.04 0.5/0.48 1/0.95',"
-            f"colorbalance=rs=-0.25:gs=0.0:bs=0.15:rm=-0.1:gm=0.0:bm=0.05,"
-            f"eq=contrast=1.35:saturation=0.55:brightness=0.0,"
-            f"vignette=angle=PI/4:mode=forward,"
-            f"fade=t=in:st=0:d={fade_duration}"
-            f"[vid];"
-            f"[intro][vid]concat=n=2:v=1:a=0[vout]"
-        )
-
-        cmd = [
-            "ffmpeg",
-            "-f",
-            "lavfi",
-            "-i",
-            f"color=c=black:size=1080x1920:rate=30:duration={intro_duration}",
-            "-ss",
-            str(start_time),
-            "-i",
-            video_path,
-            "-t",
-            str(duration),
-            "-filter_complex",
-            filter_complex,
-            "-map",
-            "[vout]",
-            "-map",
-            "1:a?",
-            "-c:v",
-            "libx264",
-            "-preset",
-            "fast",
-            "-crf",
-            "23",
-            "-c:a",
-            "aac",
-            "-b:a",
-            "128k",
-            "-movflags",
-            "+faststart",
-            output_path,
-            "-y",
-        ]
-    elif style == "D":
-        blur_duration = 3.0
-        fade_duration = 0.6
-        text_fade = 0.8
-        max_blur = 15
-
-        dark_filters = (
-            f"scale=1080:1920:force_original_aspect_ratio=increase,"
-            f"crop=1080:1920,"
-            f"eq=brightness=-0.15:contrast=1.0:saturation=0.5:gamma=0.85,"
-            f"curves=r='0/0 0.5/0.38 1/0.85':g='0/0 0.5/0.40 1/0.88':b='0/0.04 0.5/0.48 1/0.95',"
-            f"colorbalance=rs=-0.25:gs=0.0:bs=0.15:rm=-0.1:gm=0.0:bm=0.05,"
-            f"eq=contrast=1.35:saturation=0.55:brightness=0.0,"
-            f"vignette=angle=PI/4:mode=forward"
-        )
-
-        def drawtext(alpha_expr):
-            return (
-                f"drawtext=textfile='{text_file_path}'"
-                f":fontfile='/home/wchida/.local/share/fonts/BebasNeue-Regular.ttf'"
-                f":fontsize=72"
-                f":fontcolor=white@0.95"
-                f":bordercolor=black:borderw=2"
-                f":shadowcolor=black@0.8:shadowx=4:shadowy=4"
-                f":line_spacing=12"
-                f":text_align=center"
-                f":x=(w-text_w)/2"
-                f":y=h*0.78"
-                f":alpha='{alpha_expr}'"
-            )
-
-        sharp_duration = duration - blur_duration
-
-        filter_complex = (
-            # TRECHO COM BLUR: primeiros blur_duration segundos
-            f"[0:v]trim=start=0:end={blur_duration:.1f},setpts=PTS-STARTPTS,"
-            f"{dark_filters},"
-            f"boxblur={max_blur}:{max_blur},"
-            f"{drawtext(f'if(lt(t\\,{text_fade})\\,t/{text_fade}\\,1)')},"
-            f"fade=t=out:st={blur_duration - fade_duration:.2f}:d={fade_duration}"
-            f"[blurred];"
-            # TRECHO NÍTIDO: resto do vídeo
-            f"[0:v]trim=start={blur_duration:.1f},setpts=PTS-STARTPTS,"
-            f"{dark_filters},"
-            f"{drawtext(f'if(gt(t\\,{sharp_duration - text_fade:.2f})\\,({sharp_duration:.2f}-t)/{text_fade}\\,1)')},"
-            f"fade=t=in:st=0:d={fade_duration}"
-            f"[sharp];"
-            # CONCAT
-            f"[blurred][sharp]concat=n=2:v=1:a=0[vout]"
-        )
-
-        cmd = [
-            "ffmpeg",
-            "-ss",
-            str(start_time),
-            "-i",
-            video_path,
-            "-t",
-            str(duration),
-            "-filter_complex",
-            filter_complex,
-            "-map",
-            "[vout]",
-            "-map",
-            "0:a?",
-            "-c:v",
-            "libx264",
-            "-preset",
-            "fast",
-            "-crf",
-            "23",
-            "-c:a",
-            "aac",
-            "-b:a",
-            "128k",
-            "-movflags",
-            "+faststart",
-            output_path,
-            "-y",
-        ]
+    filter = FilterText()
+    cmd = [
+        "ffmpeg",
+        "-ss",
+        str(start_time),
+        "-i",
+        video_path,
+        "-t",
+        str(duration),
+        "-filter_complex",
+        filter.filter_complex(text_file_path, duration),
+        "-map",
+        "[vout]",
+        "-map",
+        "0:a?",
+        "-c:v",
+        "libx264",
+        "-preset",
+        "fast",
+        "-crf",
+        "23",
+        "-c:a",
+        "aac",
+        "-b:a",
+        "128k",
+        "-movflags",
+        "+faststart",
+        output_path,
+        "-y",
+    ]
 
     result = subprocess.run(cmd, capture_output=True, text=True)
 

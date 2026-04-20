@@ -4,7 +4,7 @@ from agent.prompts.v1.decidePrompt import decide_prompt
 import json
 import re
 from models.GraphMessage import GraphMessage
-from config.config import Config
+from utils.config import Config
 
 TOP_N = 3
 
@@ -12,8 +12,13 @@ TOP_N = 3
 def decide_segment(state: GraphMessage, client: LLMClient) -> GraphMessage:
     duration = state.get("duration")
 
-    response = ollama.send_text_ollama(
-        decide_prompt(duration, state.get("analysis"), len(state.get("frames"))),
+    # response = ollama.send_text_ollama(
+    #     decide_prompt(duration, state.get("analysis"), len(state.get("frames"))),
+    # )
+
+    response = client.llm_router(
+        prompt=decide_prompt(duration, state.get("analysis"), len(state.get("frames"))),
+        model=Config.MODEL_LLM_DECIDE,
     )
 
     content = response.strip()
