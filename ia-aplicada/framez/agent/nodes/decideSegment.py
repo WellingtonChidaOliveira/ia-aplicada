@@ -10,16 +10,25 @@ TOP_N = 3
 
 
 def decide_segment(state: GraphMessage, client: LLMClient) -> GraphMessage:
-    duration = state.get("duration")
+    try:
+        print("Decidindo segmentos...")
 
-    # response = ollama.send_text_ollama(
-    #     decide_prompt(duration, state.get("analysis"), len(state.get("frames"))),
-    # )
+        duration = state.get("duration")
 
-    response = client.llm_router(
-        prompt=decide_prompt(duration, state.get("analysis"), len(state.get("frames"))),
-        model=Config.MODEL_LLM_DECIDE,
-    )
+        # response = ollama.send_text_ollama(
+        #     decide_prompt(duration, state.get("analysis"), len(state.get("frames"))),
+        # )
+
+        response = client.llm_router(
+            prompt=decide_prompt(
+                duration, state.get("analysis"), len(state.get("frames"))
+            ),
+            model=Config.MODEL_LLM_DECIDE,
+        )
+
+    except Exception as e:
+        print(f"\nFalha ao decidir segmentos: {e}")
+        return GraphMessage({"segments": []})
 
     content = response.strip()
     print(f"Decisão do modelo:\n{content}")
