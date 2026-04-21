@@ -3,13 +3,13 @@ import os
 from models.GraphMessage import GraphMessage
 
 
-def calcular_max_frames(duration: float) -> int:
+def calculate_max_frames(duration: float) -> int:
     """
-    Quantidade de frames a amostrar baseada na duração.
-    Lógica: 1 frame a cada ~6s, mínimo 8, máximo 20.
+    Quantity of frames to sample based on duration.
+    Logic: 1 frame every ~6s, minimum 8, maximum 20.
     """
-    calculado = int(duration / 6)
-    return max(8, min(calculado, 20))
+    calculated = int(duration / 6)
+    return max(8, min(calculated, 20))
 
 
 def extract_frames(state: GraphMessage) -> GraphMessage:
@@ -17,7 +17,7 @@ def extract_frames(state: GraphMessage) -> GraphMessage:
     os.makedirs(frames_dir, exist_ok=True)
 
     duration = state.get("duration")
-    max_frames = calcular_max_frames(duration)
+    max_frames = calculate_max_frames(duration)
 
     start = 2.0
     end = duration - 2.0
@@ -50,10 +50,10 @@ def extract_frames(state: GraphMessage) -> GraphMessage:
 
         if os.path.exists(output_path):
             frames.append(filename)
-            print(f"  Frame {i}/{max_frames} extraído: t={t:.2f}s")
+            print(f"  Frame {i}/{max_frames} extracted: t={t:.2f}s")
         else:
-            print(f"  Frame {i}/{max_frames} falhou: t={t:.2f}s")
+            print(f"  Frame {i}/{max_frames} failed: t={t:.2f}s")
 
-    print(f"Frames extraídos: {len(frames)}/{max_frames}")
+    print(f"Frames extracted: {len(frames)}/{max_frames}")
 
     return {"frames_dir": frames_dir, "frames": frames}

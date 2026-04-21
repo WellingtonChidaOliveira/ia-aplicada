@@ -55,4 +55,3 @@ class TestDecideSegment(unittest.TestCase):
         response.strip.return_value = '{"trechos": [{"rank": 1, "start_time": 0.0, "end_time": 30.0, "reason": "reason"}, {"rank": 2, "start_time": 30.0, "end_time": 60.0, "reason": "reason"}, {"rank": 3, "start_time": 60.0, "end_time": 90.0, "reason": "reason"}, {"rank": 4, "start_time": 90.0, "end_time": 120.0, "reason": "reason"}]}'
         result = decide_segment(state, self.mock_llm_client)
         self.assertEqual(len(result["segments"]), 3)
-, 

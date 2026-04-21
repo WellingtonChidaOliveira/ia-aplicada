@@ -5,59 +5,64 @@ import os
 import time
 from models.GraphMessage import GraphMessage
 
+MIN_CONTENT_LENGTH = 30
+RETRY_SLEEP_SECONDS = 2
+FRAME_SLEEP_SECONDS = 1
+UNAVAILABLE_LABEL = "[analysis unavailable]"
 
-def carregar_base64(path: str) -> str:
+
+def load_base64(path: str) -> str:
     with open(path, "rb") as f:
         return base64.b64encode(f.read()).decode("utf-8")
 
 
-def analise_frame(
+def analyse_frame(
     frame_path: str, frame_name: str, frame_num: int, total: int, retries: int = 3
 ) -> str:
-    img_b64 = carregar_base64(frame_path)
+    img_b64 = load_base64(frame_path)
 
-    # extrai o timestamp do nome do arquivo: frame_0001_t006.25.jpg -> 6.25s
+    # extract timestamp from filename: frame_0001_t006.25.jpg -> 6.25s
     try:
         t = frame_name.split("_t")[1].replace(".jpg", "")
         timestamp_label = f"t={float(t):.2f}s"
     except Exception:
         timestamp_label = f"frame {frame_num}"
 
-    for tentativa in range(1, retries + 1):
+    for attempt in range(1, retries + 1):
         try:
             response = send_image_ollama(
                 img_b64,
                 image_prompt(frame_num, total, timestamp_label),
             )
             content = response.message.content.strip()
-            if len(content) >= 30:
+            if len(content) >= MIN_CONTENT_LENGTH:
                 return content
             print(
-                f"    Tentativa {tentativa} insuficiente ({len(content)} chars), repetindo..."
+                f"    Attempt {attempt} insufficient ({len(content)} chars), retrying..."
             )
         except Exception as e:
-            print(f"    Tentativa {tentativa} falhou: {e}")
+            print(f"    Attempt {attempt} failed: {e}")
 
-        time.sleep(2)
+        time.sleep(RETRY_SLEEP_SECONDS)
 
-    return "[análise indisponível]"
+    return UNAVAILABLE_LABEL
 
 
 def analyse_frames(state: GraphMessage) -> GraphMessage:
     frames = sorted(state.get("frames"))
     total = len(frames)
-    print(f"Analisando {total} frames...")
+    print(f"Analysing {total} frames...")
 
-    analises = []
+    analyses = []
     for i, frame_name in enumerate(frames, start=1):
         frame_path = os.path.join(state.get("frames_dir"), frame_name)
         print(f"  Frame {i}/{total}: {frame_name}")
-        resultado = analise_frame(frame_path, frame_name, i, total)
-        analises.append(f"[Frame {i} - {frame_name}] {resultado}")
-        time.sleep(1)
+        result = analyse_frame(frame_path, frame_name, i, total)
+        analyses.append(f"[Frame {i} - {frame_name}] {result}")
+        time.sleep(FRAME_SLEEP_SECONDS)
 
-    analysis = "\n\n".join(analises)
-    print("\nAnálise completa:")
+    analysis = "\n\n".join(analyses)
+    print("\nAnalysis complete:")
     print(analysis)
 
     return {"analysis": analysis}
