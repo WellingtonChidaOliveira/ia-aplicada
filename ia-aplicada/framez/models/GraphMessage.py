@@ -23,3 +23,4 @@ class GraphMessage(MessagesState):
     output_path: str = ""
     # all generated clip paths
     output_paths: list[str] = []
+    output_dir: str = ""

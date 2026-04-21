@@ -33,7 +33,7 @@ def _gerar_frase(client: LLMClient) -> str:
 
 
 def build_clip(state: GraphMessage, client: LLMClient) -> GraphMessage:
-    output_dir = "output"
+    output_dir = state.get("output_dir") or "output"
     os.makedirs(output_dir, exist_ok=True)
 
     segments = state.get("segments") or []
