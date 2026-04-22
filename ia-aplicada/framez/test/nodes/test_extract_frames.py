@@ -1,22 +1,25 @@
 import unittest
 from unittest.mock import patch, MagicMock
 import os
-from agent.nodes.extract_frames import calculate_max_frames, extract_frames
+from agent.nodes.extract_frames import ExtractFramesNode
 from models.graph_message import GraphMessage
 
 
 class TestExtractFrames(unittest.TestCase):
+    def setUp(self):
+        self.extract_frames = ExtractFramesNode()
+
     def test_calculate_max_frames_min(self):
         # Duration 30s -> 30/6 = 5. Min is 8.
-        self.assertEqual(calculate_max_frames(30.0), 8)
+        self.assertEqual(self.extract_frames.calculate_max_frames(30.0), 8)
 
     def test_calculate_max_frames_mid(self):
         # Duration 60s -> 60/6 = 10.
-        self.assertEqual(calculate_max_frames(60.0), 10)
+        self.assertEqual(self.extract_frames.calculate_max_frames(60.0), 10)
 
     def test_calculate_max_frames_max(self):
         # Duration 180s -> 180/6 = 30. Max is 20.
-        self.assertEqual(calculate_max_frames(180.0), 20)
+        self.assertEqual(self.extract_frames.calculate_max_frames(180.0), 20)
 
     @patch("agent.nodes.extract_frames.subprocess.run")
     @patch("agent.nodes.extract_frames.os.path.exists")
@@ -27,7 +30,7 @@ class TestExtractFrames(unittest.TestCase):
         state = GraphMessage({"duration": 60.0, "video_path": "test_video.mp4"})
 
         # Execution
-        result = extract_frames(state)
+        result = self.extract_frames.extract_frames(state)
 
         # Assertions
         # 60s / 6 = 10 frames
@@ -54,7 +57,7 @@ class TestExtractFrames(unittest.TestCase):
         state = GraphMessage({"duration": 60.0, "video_path": "test_video.mp4"})
 
         # Execution
-        result = extract_frames(state)
+        result = self.extract_frames.extract_frames(state)
 
         # Assertions
         self.assertEqual(len(result["frames"]), 5)
