@@ -1,20 +1,23 @@
 from agent.nodes.discard_invoke import discard_invoke
 from langgraph.graph import StateGraph, START, END
 from models.graph_message import GraphMessage
-from agent.nodes.get_video import get_video_frames
 from agent.nodes.extract_frames import extract_frames
 from agent.nodes.analyse_frame import analyse_frames
 from agent.nodes.decide_segment import decide_segment
 from agent.nodes.build_clip import build_clip
 from service.llm_router import LLMClient
+from agent.nodes.get_video import VideoInfo
 
 
-def start_graph(path: str | None = None, client: LLMClient | None = None):
+def start_graph(
+    path: str | None = None,
+    client: LLMClient | None = None,
+    video_info: VideoInfo | None = None,
+):
     graph = StateGraph(GraphMessage)
 
-    def get_video_info_node(state: GraphMessage):
-        p = path or state.get("video_path")
-        return get_video_frames(p)
+    # def get_video_info_node(state: GraphMessage):
+    #     return video_info.get_video_frames()
 
     def decide_segment_node(state: GraphMessage):
         c = client or LLMClient()
@@ -25,7 +28,7 @@ def start_graph(path: str | None = None, client: LLMClient | None = None):
         return build_clip(state, c)
 
     graph.add_node("discard_invoke", discard_invoke)
-    graph.add_node("get_video_frames", get_video_info_node)
+    graph.add_node("get_video_frames", video_info.get_video_frames)
     graph.add_node("extract_frames", extract_frames)
     graph.add_node("analyse_frames", analyse_frames)
     graph.add_node("decide_segment", decide_segment_node)

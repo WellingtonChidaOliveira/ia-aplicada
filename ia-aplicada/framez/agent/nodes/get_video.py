@@ -4,54 +4,68 @@ from datetime import datetime
 from models.graph_message import GraphMessage
 
 
-def get_video_info(path: str) -> dict:
-    cmd = [
-        "ffprobe",
-        "-v",
-        "quiet",
-        "-show_format",
-        "-show_streams",
-        "-print_format",
-        "json",
-        path,
-    ]
-    out = subprocess.run(cmd, capture_output=True, text=True)
-    return json.loads(out.stdout)
+class VideoInfo:
+    def __init__(self, path: str):
+        self.path = path
+        self.data = self.get_video_info()
+        self._parse_metadata()
 
+    def get_video_info(self) -> dict:
+        cmd = [
+            "ffprobe",
+            "-v",
+            "quiet",
+            "-show_format",
+            "-show_streams",
+            "-print_format",
+            "json",
+            self.path,
+        ]
+        out = subprocess.run(cmd, capture_output=True, text=True)
+        try:
+            return json.loads(out.stdout)
+        except json.JSONDecodeError:
+            return {}
 
-def get_video_frames(path: str) -> GraphMessage:
-    data = get_video_info(path)
-    # Extract duration
-    duration = float(data["format"]["duration"])
-    # Extract framerate and total frames from first video stream
-    total_frames = 0
-    for stream in data["streams"]:
-        if stream["codec_type"] == "video":
-            # FPS
-            fps_fraction = stream.get("avg_frame_rate", "0/1")
-            num, den = map(int, fps_fraction.split("/"))
-            fps = num / den if den != 0 else 0
+    def _parse_metadata(self):
+        # Extract duration
+        format_data = self.data.get("format", {})
+        self.duration = float(format_data.get("duration", 0))
 
-            # Total frames
-            nb_frames = stream.get("nb_frames")
-            if nb_frames:
-                total_frames = int(nb_frames)
-            else:
-                total_frames = int(duration * fps)
-            break
+        # Extract framerate and total frames from first video stream
+        self.fps = 0
+        self.total_frames = 0
+        for stream in self.data.get("streams", []):
+            if stream.get("codec_type") == "video":
+                # FPS
+                fps_fraction = stream.get("avg_frame_rate", "0/1")
+                try:
+                    num, den = map(int, fps_fraction.split("/"))
+                    self.fps = num / den if den != 0 else 0
+                except (ValueError, ZeroDivisionError):
+                    self.fps = 0
 
-    print(
-        f"Vídeo carregado: {duration:.2f}s, {fps:.2f} fps, {total_frames} frames totais"
-    )
+                # Total frames
+                nb_frames = stream.get("nb_frames")
+                if nb_frames:
+                    self.total_frames = int(nb_frames)
+                else:
+                    self.total_frames = int(self.duration * self.fps)
+                break
 
-    return GraphMessage(
-        datetime=datetime.now().isoformat(),
-        video_path=path,
-        success=True,
-        error="",
-        attempt=1,
-        # video_info=data,
-        duration=duration,
-        fps=fps,
-        total_frames=total_frames,
-    )
+    def get_video_frames(self, state: GraphMessage) -> dict:
+        print(
+            f"Vídeo carregado: {self.duration:.2f}s, {self.fps:.2f} fps, {self.total_frames} frames totais"
+        )
+
+        return {
+            "datetime": datetime.now().isoformat(),
+            "video_path": self.path,
+            "success": True,
+            "error": "",
+            "attempt": 1,
+            "duration": self.duration,
+            "fps": self.fps,
+            "total_frames": self.total_frames,
+        }
+

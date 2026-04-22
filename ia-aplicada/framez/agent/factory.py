@@ -1,3 +1,4 @@
+from agent.nodes.get_video import VideoInfo
 from pathlib import Path
 from service.llm_router import LLMClient
 from service.langgraph import start_graph
@@ -23,7 +24,9 @@ class AgentFactory:
         client = LLMClient()
         self.msg = "continue"
 
-        graph = start_graph(self.path, client)
+        video_info = VideoInfo(str(self.path))
+
+        graph = start_graph(self.path, client, video_info)
         graph.invoke({"messages": [{"role": "user", "content": self.msg}]})
 
 
