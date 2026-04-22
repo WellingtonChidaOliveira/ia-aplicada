@@ -1,5 +1,5 @@
 from langchain_core.messages import AIMessage
-from models.GraphMessage import GraphMessage
+from models.graph_message import GraphMessage
 
 
 def discard_invoke(state: GraphMessage) -> GraphMessage:

@@ -3,7 +3,7 @@ import http
 from agent.nodes import buildClip
 from unittest.mock import MagicMock, mock_open, patch
 from pathlib import Path
-from models.GraphMessage import GraphMessage
+from models.graph_message import GraphMessage
 
 
 def mock_llm_router(*args, **kwargs):

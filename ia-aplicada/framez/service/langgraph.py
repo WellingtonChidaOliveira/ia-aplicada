@@ -1,12 +1,12 @@
-from agent.nodes.discardInvoke import discard_invoke
+from agent.nodes.discard_invoke import discard_invoke
 from langgraph.graph import StateGraph, START, END
-from models.GraphMessage import GraphMessage
-from agent.nodes.getVideo import get_video_frames
-from agent.nodes.extractFrames import extract_frames
-from agent.nodes.analyseFrame import analyse_frames
-from agent.nodes.decideSegment import decide_segment
-from agent.nodes.buildClip import build_clip
-from service.llmRouter import LLMClient
+from models.graph_message import GraphMessage
+from agent.nodes.get_video import get_video_frames
+from agent.nodes.extract_frames import extract_frames
+from agent.nodes.analyse_frame import analyse_frames
+from agent.nodes.decide_segment import decide_segment
+from agent.nodes.build_clip import build_clip
+from service.llm_router import LLMClient
 
 
 def start_graph(path: str | None = None, client: LLMClient | None = None):
@@ -35,7 +35,8 @@ def start_graph(path: str | None = None, client: LLMClient | None = None):
         "discard_invoke",
         lambda state: (
             "skip"
-            if (state.get("messages") or []) and state.get("messages")[-1].content == "skip message"
+            if (state.get("messages") or [])
+            and state.get("messages")[-1].content == "skip message"
             else "continue"
         ),
         {

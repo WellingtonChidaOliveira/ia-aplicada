@@ -1,9 +1,9 @@
-from agent.prompts.v1.imagePrompt import image_prompt
+from agent.prompts.v1.image_prompt import image_prompt
 from service.ollama import send_image_ollama
 import base64
 import os
 import time
-from models.GraphMessage import GraphMessage
+from models.graph_message import GraphMessage
 
 MIN_CONTENT_LENGTH = 30
 RETRY_SLEEP_SECONDS = 2

@@ -2,9 +2,9 @@ import subprocess
 import os
 import time
 import textwrap
-from models.GraphMessage import GraphMessage
-from agent.prompts.v3.generatePhrase import generate_phrase_prompt
-from service.llmRouter import LLMClient
+from models.graph_message import GraphMessage
+from agent.prompts.v3.generate_phrase import generate_phrase_prompt
+from service.llm_router import LLMClient
 from service.ollama import send_text_ollama
 from utils.config import Config
 from utils.filter_text import FilterText

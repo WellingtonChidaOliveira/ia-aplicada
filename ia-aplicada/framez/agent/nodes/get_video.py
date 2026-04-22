@@ -1,7 +1,7 @@
 import json
 import subprocess
 from datetime import datetime
-from models.GraphMessage import GraphMessage
+from models.graph_message import GraphMessage
 
 
 def get_video_info(path: str) -> dict:

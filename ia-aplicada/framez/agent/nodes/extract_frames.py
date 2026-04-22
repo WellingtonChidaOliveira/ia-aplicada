@@ -1,6 +1,6 @@
 import subprocess
 import os
-from models.GraphMessage import GraphMessage
+from models.graph_message import GraphMessage
 
 
 def calculate_max_frames(duration: float) -> int:

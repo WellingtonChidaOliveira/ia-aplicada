@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import MagicMock
-from models.GraphMessage import GraphMessage
-from agent.nodes.decideSegment import decide_segment
+from models.graph_message import GraphMessage
+from agent.nodes.decide_segment import decide_segment
 
 
 def mock_state():

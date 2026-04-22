@@ -1,9 +1,9 @@
 from service import ollama
-from service.llmRouter import LLMClient
-from agent.prompts.v1.decidePrompt import decide_prompt
+from service.llm_router import LLMClient
+from agent.prompts.v1.decide_prompt import decide_prompt
 import json
 import re
-from models.GraphMessage import GraphMessage
+from models.graph_message import GraphMessage
 from utils.config import Config
 
 TOP_N = 3

@@ -1,12 +1,11 @@
 import unittest
 from unittest.mock import patch, MagicMock
 import os
-from agent.nodes.extractFrames import calculate_max_frames, extract_frames
-from models.GraphMessage import GraphMessage
+from agent.nodes.extract_frames import calculate_max_frames, extract_frames
+from models.graph_message import GraphMessage
 
 
 class TestExtractFrames(unittest.TestCase):
-
     def test_calculate_max_frames_min(self):
         # Duration 30s -> 30/6 = 5. Min is 8.
         self.assertEqual(calculate_max_frames(30.0), 8)
@@ -19,16 +18,13 @@ class TestExtractFrames(unittest.TestCase):
         # Duration 180s -> 180/6 = 30. Max is 20.
         self.assertEqual(calculate_max_frames(180.0), 20)
 
-    @patch("agent.nodes.extractFrames.subprocess.run")
-    @patch("agent.nodes.extractFrames.os.path.exists")
-    @patch("agent.nodes.extractFrames.os.makedirs")
+    @patch("agent.nodes.extract_frames.subprocess.run")
+    @patch("agent.nodes.extract_frames.os.path.exists")
+    @patch("agent.nodes.extract_frames.os.makedirs")
     def test_extract_frames_success(self, mock_makedirs, mock_exists, mock_run):
         # Mocking
         mock_exists.return_value = True
-        state = GraphMessage({
-            "duration": 60.0,
-            "video_path": "test_video.mp4"
-        })
+        state = GraphMessage({"duration": 60.0, "video_path": "test_video.mp4"})
 
         # Execution
         result = extract_frames(state)
@@ -49,16 +45,13 @@ class TestExtractFrames(unittest.TestCase):
         self.assertIn("-vframes", cmd)
         self.assertIn("1", cmd)
 
-    @patch("agent.nodes.extractFrames.subprocess.run")
-    @patch("agent.nodes.extractFrames.os.path.exists")
-    @patch("agent.nodes.extractFrames.os.makedirs")
+    @patch("agent.nodes.extract_frames.subprocess.run")
+    @patch("agent.nodes.extract_frames.os.path.exists")
+    @patch("agent.nodes.extract_frames.os.makedirs")
     def test_extract_frames_failure(self, mock_makedirs, mock_exists, mock_run):
         # Mocking: first 5 frames succeed, next 5 fail
         mock_exists.side_effect = [True] * 5 + [False] * 5
-        state = GraphMessage({
-            "duration": 60.0,
-            "video_path": "test_video.mp4"
-        })
+        state = GraphMessage({"duration": 60.0, "video_path": "test_video.mp4"})
 
         # Execution
         result = extract_frames(state)
