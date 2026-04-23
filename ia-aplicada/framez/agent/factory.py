@@ -1,3 +1,4 @@
+from agent.nodes.analyse_frame import AnalyseFrameNode
 from agent.nodes.get_video import VideoInfo
 from agent.nodes.extract_frames import ExtractFramesNode
 from pathlib import Path
@@ -27,8 +28,11 @@ class AgentFactory:
 
         video_info = VideoInfo(str(self.path))
         extract_frames = ExtractFramesNode()
+        analyse_frames = AnalyseFrameNode()
 
-        graph = start_graph(self.path, client, video_info, extract_frames)
+        graph = start_graph(
+            self.path, client, video_info, extract_frames, analyse_frames
+        )
         graph.invoke({"messages": [{"role": "user", "content": self.msg}]})
 
 
