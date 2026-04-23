@@ -3,7 +3,7 @@ import ollama
 
 def send_image_ollama(img_b64: str, prompt: str):
     response = ollama.chat(
-        model="qwen3-vl:8b",
+        model="llava:7b",
         stream=False,
         messages=[
             {
@@ -14,7 +14,7 @@ def send_image_ollama(img_b64: str, prompt: str):
         ],
         options={
             "temperature": 0.1,
-            "num_predict": 256,
+            "num_predict": 512,
         },
     )
 

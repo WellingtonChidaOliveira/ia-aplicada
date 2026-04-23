@@ -7,8 +7,15 @@ from models.graph_message import GraphMessage
 class VideoInfo:
     def __init__(self, path: str):
         self.path = path
-        self.data = self.get_video_info()
-        self._parse_metadata()
+        self.data = None
+        self.duration = 0
+        self.fps = 0
+        self.total_frames = 0
+
+    def _ensure_loaded(self):
+        if self.data is None:
+            self.data = self.get_video_info()
+            self._parse_metadata()
 
     def get_video_info(self) -> dict:
         cmd = [
@@ -54,6 +61,7 @@ class VideoInfo:
                 break
 
     def get_video_frames(self, state: GraphMessage) -> dict:
+        self._ensure_loaded()
         print(
             f"Vídeo carregado: {self.duration:.2f}s, {self.fps:.2f} fps, {self.total_frames} frames totais"
         )

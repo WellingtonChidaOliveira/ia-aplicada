@@ -1,8 +1,8 @@
 from agent.nodes.analyse_frame import AnalyseFrameNode
 from agent.nodes.get_video import VideoInfo
 from agent.nodes.extract_frames import ExtractFramesNode
-from agent.nodes.decide_segment import DecideSegmentNode
-from agent.nodes.build_clip import BuildClipNode
+from agent.nodes.decide_segment import DecideSegment
+from agent.nodes.build_clip import BuildClip
 from pathlib import Path
 from service.llm_router import LLMClient
 from service.langgraph import start_graph
@@ -31,16 +31,15 @@ class AgentFactory:
         video_info = VideoInfo(str(self.path))
         extract_frames = ExtractFramesNode()
         analyse_frames = AnalyseFrameNode()
-        decide_segment = DecideSegmentNode(client)
-        build_clip = BuildClipNode(client)
+        decide_segment = DecideSegment(client)
+        build_clip = BuildClip(client)
 
         graph = start_graph(
-            client,
-            video_info,
-            extract_frames,
-            analyse_frames,
-            decide_segment,
-            build_clip,
+            video_info=video_info,
+            extract_frames=extract_frames,
+            analyse_frames=analyse_frames,
+            decide_segment=decide_segment,
+            build_clip=build_clip,
         )
         graph.invoke({"messages": [{"role": "user", "content": self.msg}]})
 
@@ -50,4 +49,18 @@ class AgentFactory:
 # Python inspect to validate the signature and rejects anything else.
 # path and client are fetched lazily inside the graph nodes from the state.
 def CreateGraph():
-    return start_graph(Path("./videos/tr.mp4"), LLMClient())
+    client = LLMClient()
+    video_path = str(Path("./videos/tr.mp4"))
+    video_info = VideoInfo(video_path)
+    extract_frames = ExtractFramesNode()
+    analyse_frames = AnalyseFrameNode()
+    decide_segment = DecideSegment(client)
+    build_clip = BuildClip(client)
+
+    return start_graph(
+        video_info=video_info,
+        extract_frames=extract_frames,
+        analyse_frames=analyse_frames,
+        decide_segment=decide_segment,
+        build_clip=build_clip,
+    )

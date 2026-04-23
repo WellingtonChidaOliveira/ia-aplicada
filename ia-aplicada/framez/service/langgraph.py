@@ -4,16 +4,16 @@ from models.graph_message import GraphMessage
 from agent.nodes.get_video import VideoInfo
 from agent.nodes.extract_frames import ExtractFramesNode
 from agent.nodes.analyse_frame import AnalyseFrameNode
-from agent.nodes.decide_segment import DecideSegmentNode
-from agent.nodes.build_clip import BuildClipNode
+from agent.nodes.decide_segment import DecideSegment
+from agent.nodes.build_clip import BuildClip
 
 
 def start_graph(
     video_info: VideoInfo | None = None,
     extract_frames: ExtractFramesNode | None = None,
     analyse_frames: AnalyseFrameNode | None = None,
-    decide_segment: DecideSegmentNode | None = None,
-    build_clip: BuildClipNode | None = None,
+    decide_segment: DecideSegment | None = None,
+    build_clip: BuildClip | None = None,
 ):
     graph = StateGraph(GraphMessage)
 

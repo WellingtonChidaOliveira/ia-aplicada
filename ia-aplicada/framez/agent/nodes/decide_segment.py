@@ -7,7 +7,7 @@ from models.graph_message import GraphMessage
 from utils.config import Config
 
 
-class DecisionSegments:
+class DecideSegment:
     def __init__(self, client: LLMClient):
         self.client = client
 
