@@ -1,6 +1,7 @@
 from agent.nodes.analyse_frame import AnalyseFrameNode
 from agent.nodes.get_video import VideoInfo
 from agent.nodes.extract_frames import ExtractFramesNode
+from agent.nodes.decide_segment import DecideSegmentNode
 from pathlib import Path
 from service.llm_router import LLMClient
 from service.langgraph import start_graph
@@ -29,9 +30,14 @@ class AgentFactory:
         video_info = VideoInfo(str(self.path))
         extract_frames = ExtractFramesNode()
         analyse_frames = AnalyseFrameNode()
+        decide_segment = DecideSegmentNode(client)
 
         graph = start_graph(
-            self.path, client, video_info, extract_frames, analyse_frames
+            client,
+            video_info,
+            extract_frames,
+            analyse_frames,
+            decide_segment,
         )
         graph.invoke({"messages": [{"role": "user", "content": self.msg}]})
 

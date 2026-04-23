@@ -1,47 +1,47 @@
 from service import ollama
 from service.llm_router import LLMClient
-from agent.prompts.v1.decide_prompt import decide_prompt
+from agent.prompts.v2.decide_prompt import decide_prompt
 import json
 import re
 from models.graph_message import GraphMessage
 from utils.config import Config
 
-TOP_N = 3
 
+class DecisionSegments:
+    def __init__(self, client: LLMClient):
+        self.client = client
 
-def decide_segment(state: GraphMessage, client: LLMClient) -> GraphMessage:
-    try:
-        print("Decidindo segmentos...")
+    def decide_segment(self, state: GraphMessage) -> GraphMessage:
+        try:
+            print("Decidindo segmentos...")
 
-        duration = state.get("duration")
+            duration = state.get("duration")
 
-        # response = ollama.send_text_ollama(
-        #     decide_prompt(duration, state.get("analysis"), len(state.get("frames"))),
-        # )
+            # response = ollama.send_text_ollama(
+            #     decide_prompt(duration, state.get("analysis"), len(state.get("frames"))),
+            # )
 
-        response = client.llm_router(
-            prompt=decide_prompt(
-                duration, state.get("analysis"), len(state.get("frames"))
-            ),
-            model=Config.MODEL_LLM_DECIDE,
-        )
+            response = self.client.llm_router(
+                prompt=decide_prompt(duration, state.get("analysis")),
+                model=Config.MODEL_LLM_DECIDE,
+            )
 
-    except Exception as e:
-        print(f"\nFalha ao decidir segmentos: {e}")
-        return GraphMessage({"segments": []})
+        except Exception as e:
+            print(f"\nFalha ao decidir segmentos: {e}")
+            return GraphMessage({"segments": []})
 
-    content = response.strip()
-    print(f"Decisão do modelo:\n{content}")
+        content = response.strip()
+        print(f"Decisão do modelo:\n{content}")
 
-    segments = _parse_segments(content, duration)
+        segments = _parse_segments(content, duration)
 
-    for i, seg in enumerate(segments, start=1):
-        print(
-            f"  Top {i}: {seg['start_time']:.2f}s → {seg['end_time']:.2f}s "
-            f"({seg['end_time'] - seg['start_time']:.1f}s) — {seg.get('reason', '')}"
-        )
+        for i, seg in enumerate(segments, start=1):
+            print(
+                f"  Top {i}: {seg['start_time']:.2f}s → {seg['end_time']:.2f}s "
+                f"({seg['end_time'] - seg['start_time']:.1f}s) — {seg.get('reason', '')}"
+            )
 
-    return {"segments": segments}
+        return GraphMessage({"segments": segments})
 
 
 def _parse_segments(content: str, duration: float) -> list[dict]:
@@ -54,7 +54,7 @@ def _parse_segments(content: str, duration: float) -> list[dict]:
         if match:
             data = json.loads(match.group())
             trechos = data.get("trechos", [])
-            for item in trechos[:TOP_N]:
+            for item in trechos[: Config.TOP_N]:
                 start = float(item["start_time"])
                 end = float(item["end_time"])
                 start, end = _validar_trecho(start, end, duration)
@@ -70,14 +70,14 @@ def _parse_segments(content: str, duration: float) -> list[dict]:
         print(f"  Falha ao parsear JSON: {e}")
 
     # preenche com fallbacks caso o modelo tenha retornado menos de TOP_N
-    if len(parsed) < TOP_N:
+    if len(parsed) < Config.TOP_N:
         print(
             f"  Modelo retornou {len(parsed)} trecho(s); completando com fallbacks..."
         )
-        fallbacks = _gerar_fallbacks(duration, TOP_N - len(parsed), parsed)
+        fallbacks = _gerar_fallbacks(duration, Config.TOP_N - len(parsed), parsed)
         parsed.extend(fallbacks)
 
-    return parsed[:TOP_N]
+    return parsed[: Config.TOP_N]
 
 
 def _validar_trecho(start: float, end: float, duration: float):

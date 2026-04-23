@@ -10,12 +10,12 @@ from utils.config import Config
 from utils.filter_text import FilterText
 
 
-def _gerar_frase(client: LLMClient) -> str:
+def _gerar_frase(reason: str, client: LLMClient) -> str:
     """Chama o LLM para gerar uma frase motivacional única."""
     try:
         # response = send_text_ollama(generate_phrase_prompt())
         response = client.llm_router(
-            prompt=generate_phrase_prompt(),
+            prompt=generate_phrase_prompt(reason),
             model=Config.MODEL_LLM_PHRASE,
             options={
                 "temperature": 1.2,
@@ -26,68 +26,75 @@ def _gerar_frase(client: LLMClient) -> str:
         )
         return response.strip()
     except Exception as e:
-        print(f"   Falha ao gerar frase: {e}")
-        print("   Usando frase de fallback")
-        response = send_text_ollama(generate_phrase_prompt())
-        return response.strip()
+        print(f"   Falha ao gerar frase no OpenRouter: {e}")
+        print("   Usando fallback local (Ollama)...")
+        try:
+            return send_text_ollama(generate_phrase_prompt(reason))
+        except Exception as ollama_e:
+            print(f"   Falha também no Ollama: {ollama_e}")
+            return "A persistência é o caminho para o êxito."
 
 
-def build_clip(state: GraphMessage, client: LLMClient) -> GraphMessage:
-    output_dir = state.get("output_dir") or "output"
-    os.makedirs(output_dir, exist_ok=True)
+class BuildClip:
+    def __init__(self, client: LLMClient):
+        self.client = client
 
-    segments = state.get("segments") or []
-    video_name = os.path.splitext(os.path.basename(state.get("video_path")))[0]
-    base_timestamp = int(time.time())
+    def build_clip(self, state: GraphMessage) -> GraphMessage:
+        output_dir = state.get("output_dir") or "output"
+        os.makedirs(output_dir, exist_ok=True)
 
-    output_paths = []
-    errors = []
+        segments = state.get("segments") or []
+        video_name = os.path.splitext(os.path.basename(state.get("video_path")))[0]
+        base_timestamp = int(time.time())
 
-    for seg in segments:
-        rank = seg.get("rank", len(output_paths) + 1)
-        start_time = seg["start_time"]
-        end_time = seg["end_time"]
-        duration = end_time - start_time
+        output_paths = []
+        errors = []
 
-        print(f"\n── Gerando clipe top{rank} ─────────────────────────────")
-        print(f"   Trecho: {start_time:.2f}s → {end_time:.2f}s ({duration:.1f}s)")
-        print(f"   Motivo: {seg.get('reason', '')}")
+        for seg in segments:
+            rank = seg.get("rank", len(output_paths) + 1)
+            start_time = seg["start_time"]
+            end_time = seg["end_time"]
+            duration = end_time - start_time
 
-        # gera frase motivacional individual para este clipe
-        phrase = _gerar_frase(client)
-        print(f"   Frase: {phrase}")
+            print(f"\n── Gerando clipe top{rank} ─────────────────────────────")
+            print(f"   Trecho: {start_time:.2f}s → {end_time:.2f}s ({duration:.1f}s)")
+            print(f"   Motivo: {seg.get('reason', '')}")
 
-        output_path = os.path.join(
-            output_dir, f"{base_timestamp}_{video_name}_top{rank}.mp4"
-        )
+            # gera frase motivacional individual para este clipe
+            phrase = _gerar_frase(seg.get("reason"), self.client)
+            print(f"   Frase: {phrase}")
 
-        result = _render_clip(
-            video_path=state.get("video_path"),
-            start_time=start_time,
-            duration=duration,
-            phrase=phrase,
-            output_path=output_path,
-            output_dir=output_dir,
-            base_timestamp=base_timestamp,
-            rank=rank,
-        )
+            output_path = os.path.join(
+                output_dir, f"{base_timestamp}_{video_name}_top{rank}.mp4"
+            )
 
-        if result["success"]:
-            tamanho_mb = os.path.getsize(output_path) / (1024 * 1024)
-            print(f"   ✓ Salvo em: {output_path} ({tamanho_mb:.1f}MB)")
-            output_paths.append(output_path)
-        else:
-            print(f"   ✗ Erro no top{rank}: {result['error'][:200]}")
-            errors.append(result["error"])
+            result = _render_clip(
+                video_path=state.get("video_path"),
+                start_time=start_time,
+                duration=duration,
+                phrase=phrase,
+                output_path=output_path,
+                output_dir=output_dir,
+                base_timestamp=base_timestamp,
+                rank=rank,
+            )
 
-    print(f"\n══ {len(output_paths)}/3 clipes gerados com sucesso ══")
+            if result["success"]:
+                tamanho_mb = os.path.getsize(output_path) / (1024 * 1024)
+                print(f"   ✓ Salvo em: {output_path} ({tamanho_mb:.1f}MB)")
+                output_paths.append(output_path)
+            else:
+                print(f"   ✗ Erro no top{rank}: {result['error'][:200]}")
+                errors.append(result["error"])
 
-    return {
-        "success": len(output_paths) > 0,
-        "output_paths": output_paths,
-        "output_path": output_paths[0] if output_paths else "",
-        "error": "; ".join(errors) if errors else "",
-    }
+        print(f"\n══ {len(output_paths)}/3 clipes gerados com sucesso ══")
+
+        return {
+            "success": len(output_paths) > 0,
+            "output_paths": output_paths,
+            "output_path": output_paths[0] if output_paths else "",
+            "error": "; ".join(errors) if errors else "",
+        }
 
 
 def _render_clip(

@@ -1,25 +1,22 @@
-def generate_phrase_prompt():
-    return """Existe um momento em que alguém está completamente sozinho com si mesmo.
+def generate_phrase_prompt(reason: str):
+    return f"""Existe um momento em que alguém está completamente sozinho com o seu esforço. 
 Sem plateia. Sem aprovação. Só ele e o peso do que escolheu carregar.
 
-Escreva UMA frase que nomeie o que essa pessoa sente nesse momento.
+Com base na RAZÃO DO MOMENTO abaixo, escreva UMA frase curta que nomeie a verdade interna desse instante.
 
-Pode vir de qualquer ângulo:
-— Uma observação fria sobre o que as pessoas fazem umas com as outras
-— Uma verdade que dói porque é reconhecível demais
-— Uma declaração interna dita em silêncio
-— Uma imagem que carrega mais peso do que parece
-— Uma constatação sobre perda, recomeço, ou persistência sem esperança
+DIRETRIZES CRÍTICAS:
+- Não descreva o exercício ou a ação física. Nomeie o SENTIMENTO ou a CONSTATAÇÃO por trás da ação.
+- Estilo: Estóico, seco e profundo. Frases que fazem o leitor parar e reler.
+- Máximo 80 caracteres.
+- Retorne apenas a frase, sem aspas e sem explicações.
 
-A frase deve fazer quem lê parar e reler. Máximo 80 caracteres.
-Retorne apenas a frase, sem aspas, sem explicações.
+RAZÃO DO MOMENTO (O que está acontecendo): {reason}
 
-Referências de impacto — estilos completamente diferentes entre si:
-"O homem abandonou a mulher que amava para ir atrás da mulher que o amava."
-"Sigo porque desistir seria transformar o silêncio dos outros em meu próprio eco."
-"O que me destruiu também me ensinou exatamente onde eu era fraco."
-"Que a calma dentro de mim prevaleça sobre o caos ao meu redor."
-"Ela esperou tanto que esqueceu o que estava esperando."
+REFERÊNCIAS DE IMPACTO:
+"O que me destrói também me ensina exatamente onde eu era fraco."
+"A carga não pesa mais que a vontade de parar."
 "Não é força. É a recusa de dar razão a quem esperava que eu parasse."
-"Volto todo dia para o único lugar onde minha dor faz sentido."
+"O silêncio do esforço é o único lugar onde minha dor faz sentido."
+"Venci a mim mesmo hoje; o resto do mundo é apenas uma consequência."
+"O peso que carrego hoje é a leveza que terei amanhã."
 """

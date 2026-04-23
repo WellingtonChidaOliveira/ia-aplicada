@@ -1,4 +1,4 @@
-from agent.prompts.v1.image_prompt import image_prompt
+from agent.prompts.v2.image_prompt import image_prompt
 from service.ollama import send_image_ollama
 import base64
 import os

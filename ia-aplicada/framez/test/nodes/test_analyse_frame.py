@@ -39,13 +39,13 @@ class TestAnalyseFrame(unittest.TestCase):
 
     @patch("agent.nodes.analyse_frame.time.sleep")
     @patch("agent.nodes.analyse_frame.send_image_ollama")
-    @patch("agent.nodes.analyse_frame.load_base64", return_value="base64data")
+    @patch("agent.nodes.analyse_frame.AnalyseFrameNode.load_base64", return_value="base64data")
     def test_returns_content_on_success(self, _mock_b64, mock_ollama, mock_sleep):
         mock_response = MagicMock()
         mock_response.message.content = "A" * Config.MIN_CONTENT_LENGTH
         mock_ollama.return_value = mock_response
 
-        result = self.node.analyse_frame("/fake/frame.jpg", "frame_0001_t006.25.jpg", 1)
+        result = self.node.analyse_frame("/fake/frame.jpg", "frame_0001_t006.25.jpg", 1, 10)
 
         self.assertEqual(result, "A" * Config.MIN_CONTENT_LENGTH)
         mock_ollama.assert_called_once()
@@ -53,7 +53,7 @@ class TestAnalyseFrame(unittest.TestCase):
 
     @patch("agent.nodes.analyse_frame.time.sleep")
     @patch("agent.nodes.analyse_frame.send_image_ollama")
-    @patch("agent.nodes.analyse_frame.load_base64", return_value="base64data")
+    @patch("agent.nodes.analyse_frame.AnalyseFrameNode.load_base64", return_value="base64data")
     def test_retries_when_content_too_short(self, _mock_b64, mock_ollama, mock_sleep):
         short_response = MagicMock()
         short_response.message.content = "short"
@@ -63,7 +63,7 @@ class TestAnalyseFrame(unittest.TestCase):
 
         mock_ollama.side_effect = [short_response, good_response]
 
-        result = self.node.analyse_frame("/fake/frame.jpg", "frame_0001_t006.25.jpg", 1)
+        result = self.node.analyse_frame("/fake/frame.jpg", "frame_0001_t006.25.jpg", 1, 10)
 
         self.assertEqual(result, "B" * Config.MIN_CONTENT_LENGTH)
         self.assertEqual(mock_ollama.call_count, 2)
@@ -71,7 +71,7 @@ class TestAnalyseFrame(unittest.TestCase):
 
     @patch("agent.nodes.analyse_frame.time.sleep")
     @patch("agent.nodes.analyse_frame.send_image_ollama")
-    @patch("agent.nodes.analyse_frame.load_base64", return_value="base64data")
+    @patch("agent.nodes.analyse_frame.AnalyseFrameNode.load_base64", return_value="base64data")
     def test_returns_unavailable_when_all_retries_exhausted(
         self, _mock_b64, mock_ollama, mock_sleep
     ):
@@ -79,7 +79,7 @@ class TestAnalyseFrame(unittest.TestCase):
         mock_response.message.content = "tiny"
         mock_ollama.return_value = mock_response
 
-        result = self.node.analyse_frame("/fake/frame.jpg", "frame_0001_t006.25.jpg", 1)
+        result = self.node.analyse_frame("/fake/frame.jpg", "frame_0001_t006.25.jpg", 1, 10)
 
         self.assertEqual(result, Config.UNAVAILABLE_LABEL)
         self.assertEqual(mock_ollama.call_count, 3)
@@ -87,20 +87,20 @@ class TestAnalyseFrame(unittest.TestCase):
 
     @patch("agent.nodes.analyse_frame.time.sleep")
     @patch("agent.nodes.analyse_frame.send_image_ollama")
-    @patch("agent.nodes.analyse_frame.load_base64", return_value="base64data")
+    @patch("agent.nodes.analyse_frame.AnalyseFrameNode.load_base64", return_value="base64data")
     def test_returns_unavailable_when_ollama_raises(
         self, _mock_b64, mock_ollama, mock_sleep
     ):
         mock_ollama.side_effect = Exception("Connection error")
 
-        result = self.node.analyse_frame("/fake/frame.jpg", "frame_0001_t006.25.jpg", 1)
+        result = self.node.analyse_frame("/fake/frame.jpg", "frame_0001_t006.25.jpg", 1, 10)
 
         self.assertEqual(result, Config.UNAVAILABLE_LABEL)
-        self.assertEqual(mock_ollama.call_count, 2)
+        self.assertEqual(mock_ollama.call_count, 3)
 
     @patch("agent.nodes.analyse_frame.time.sleep")
     @patch("agent.nodes.analyse_frame.send_image_ollama")
-    @patch("agent.nodes.analyse_frame.load_base64", return_value="base64data")
+    @patch("agent.nodes.analyse_frame.AnalyseFrameNode.load_base64", return_value="base64data")
     def test_falls_back_to_frame_number_when_timestamp_not_parseable(
         self, _mock_b64, mock_ollama, mock_sleep
     ):
@@ -109,20 +109,20 @@ class TestAnalyseFrame(unittest.TestCase):
         mock_ollama.return_value = mock_response
 
         # frame name without "_t" pattern should use fallback label
-        result = self.node.analyse_frame("/fake/frame.jpg", "no_timestamp_frame.jpg", 3)
+        result = self.node.analyse_frame("/fake/frame.jpg", "no_timestamp_frame.jpg", 3, 10)
 
         self.assertEqual(result, "C" * Config.MIN_CONTENT_LENGTH)
         mock_ollama.assert_called_once()
 
     @patch("agent.nodes.analyse_frame.time.sleep")
     @patch("agent.nodes.analyse_frame.send_image_ollama")
-    @patch("agent.nodes.analyse_frame.load_base64", return_value="base64data")
+    @patch("agent.nodes.analyse_frame.AnalyseFrameNode.load_base64", return_value="base64data")
     def test_parses_timestamp_from_frame_name(self, _mock_b64, mock_ollama, mock_sleep):
         mock_response = MagicMock()
         mock_response.message.content = "D" * Config.MIN_CONTENT_LENGTH
         mock_ollama.return_value = mock_response
 
-        result = self.node.analyse_frame("/fake/frame.jpg", "frame_0001_t006.25.jpg", 1)
+        result = self.node.analyse_frame("/fake/frame.jpg", "frame_0001_t006.25.jpg", 1, 10)
 
         self.assertEqual(result, "D" * Config.MIN_CONTENT_LENGTH)
         call_args = mock_ollama.call_args
@@ -132,9 +132,12 @@ class TestAnalyseFrame(unittest.TestCase):
 
 
 class TestAnalyseFrames(unittest.TestCase):
+    def setUp(self):
+        self.node = AnalyseFrameNode()
+
     @patch("agent.nodes.analyse_frame.time.sleep")
     @patch(
-        "agent.nodes.analyse_frame.analyse_frame",
+        "agent.nodes.analyse_frame.AnalyseFrameNode.analyse_frame",
         return_value="Athlete performing squat with high effort.",
     )
     def test_returns_analysis_for_all_frames(self, mock_analyse, mock_sleep):
@@ -149,7 +152,7 @@ class TestAnalyseFrames(unittest.TestCase):
 
     @patch("agent.nodes.analyse_frame.time.sleep")
     @patch(
-        "agent.nodes.analyse_frame.analyse_frame",
+        "agent.nodes.analyse_frame.AnalyseFrameNode.analyse_frame",
         return_value="Athlete performing squat with high effort.",
     )
     def test_frames_are_sorted(self, mock_analyse, mock_sleep):
@@ -163,7 +166,7 @@ class TestAnalyseFrames(unittest.TestCase):
 
     @patch("agent.nodes.analyse_frame.time.sleep")
     @patch(
-        "agent.nodes.analyse_frame.analyse_frame",
+        "agent.nodes.analyse_frame.AnalyseFrameNode.analyse_frame",
         return_value=Config.UNAVAILABLE_LABEL,
     )
     def test_handles_unavailable_analysis(self, mock_analyse, mock_sleep):
@@ -174,7 +177,7 @@ class TestAnalyseFrames(unittest.TestCase):
         self.assertIn(Config.UNAVAILABLE_LABEL, result["analysis"])
 
     @patch("agent.nodes.analyse_frame.time.sleep")
-    @patch("agent.nodes.analyse_frame.analyse_frame")
+    @patch("agent.nodes.analyse_frame.AnalyseFrameNode.analyse_frame")
     def test_returns_empty_analysis_for_no_frames(self, mock_analyse, mock_sleep):
         state = MagicMock()
         state.get.side_effect = lambda key: [] if key == "frames" else "/fake/dir"
@@ -183,6 +186,7 @@ class TestAnalyseFrames(unittest.TestCase):
 
         self.assertEqual(result["analysis"], "")
         mock_analyse.assert_not_called()
+
 
 
 if __name__ == "__main__":

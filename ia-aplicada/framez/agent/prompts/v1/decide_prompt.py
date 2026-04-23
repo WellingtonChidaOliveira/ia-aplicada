@@ -1,12 +1,12 @@
-def decide_prompt(duration: float, analysis: str, frames_count: int):
+def decide_prompt(duration: float, analysis: str):
     prompt = f"""Você é um curador de conteúdo de alta performance para redes sociais.
 
-            Sua função é analisar os frames de um vídeo de treino e selecionar os 3 MELHORES TRECHOS, do mais impactante ao menos impactante, para gerar clipes curtos (estilo TikTok/Reels).
+            Sua função é analisar os frames de um vídeo de treino/calistenia/poses e selecionar os 3 MELHORES TRECHOS, do mais impactante ao menos impactante, para gerar clipes curtos (estilo TikTok/Reels).
 
             Você deve priorizar:
             - Pico de esforço muscular
-            - Expressão facial de intensidade/foco
-            - Boa qualidade de imagem
+            - Expressão facial de intensidade/foco/emoção
+            - Boa qualidade de imagem/enquadramento
             - Movimento fluido e potente
             - Evitar partes paradas, confusas ou de baixa qualidade
 
@@ -49,4 +49,3 @@ def decide_prompt(duration: float, analysis: str, frames_count: int):
             }}"""
 
     return prompt
-

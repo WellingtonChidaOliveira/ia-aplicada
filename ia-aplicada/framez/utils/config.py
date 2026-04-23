@@ -16,3 +16,4 @@ class Config:
     UNAVAILABLE_LABEL = "[analysis unavailable]"
 
     RETRIES_ANALYSE = 3
+    TOP_N = 3
