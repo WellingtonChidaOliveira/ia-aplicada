@@ -1,6 +1,5 @@
 import unittest
-from unittest.mock import patch, MagicMock
-import os
+from unittest.mock import patch
 from agent.nodes.extract_frames import ExtractFramesNode
 from models.graph_message import GraphMessage
 

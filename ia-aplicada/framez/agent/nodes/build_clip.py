@@ -3,7 +3,7 @@ import os
 import time
 import textwrap
 from models.graph_message import GraphMessage
-from agent.prompts.v3.generate_phrase import generate_phrase_prompt
+from agent.prompts.v4.generate_phrase import generate_phrase_prompt
 from service.llm_router import LLMClient
 from service.ollama import send_text_ollama
 from utils.config import Config
@@ -15,7 +15,7 @@ def _gerar_frase(reason: str, client: LLMClient) -> str:
     try:
         # response = send_text_ollama(generate_phrase_prompt())
         response = client.llm_router(
-            prompt=generate_phrase_prompt(reason),
+            prompt=generate_phrase_prompt(),
             model=Config.MODEL_LLM_PHRASE,
             options={
                 "temperature": 1.2,
