@@ -108,7 +108,9 @@ def _render_clip(
     rank: int,
 ) -> dict:
     raw_phrase = phrase.replace("'", "").replace('"', "")
-    wrapped_lines = textwrap.wrap(raw_phrase, width=27)
+    wrapped_lines = textwrap.wrap(
+        raw_phrase, width=22, break_long_words=False, break_on_hyphens=False
+    )
     text_file_path = os.path.join(output_dir, f"{base_timestamp}_top{rank}_text.txt")
 
     with open(text_file_path, "w", encoding="utf-8") as f:
