@@ -16,6 +16,7 @@ def send_image_ollama(img_b64: str, prompt: str):
             "temperature": 0.1,
             "num_predict": 512,
         },
+        keep_alive=0,
     )
 
     return response
@@ -23,7 +24,7 @@ def send_image_ollama(img_b64: str, prompt: str):
 
 def send_text_ollama(prompt: str):
     response = ollama.chat(
-        model="kimi-k2.5:cloud",
+        model="llama3.1:latest",
         stream=False,
         messages=[{"role": "user", "content": prompt}],
         options={

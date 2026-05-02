@@ -1,4 +1,4 @@
-from agent.factory import AgentFactory
+from factory import AgentFactory
 
 
 if __name__ == "__main__":

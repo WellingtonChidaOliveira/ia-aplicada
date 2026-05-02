@@ -12,7 +12,7 @@ class Config:
 
     MIN_CONTENT_LENGTH = 30
     RETRY_SLEEP_SECONDS = 2
-    FRAME_SLEEP_SECONDS = 1
+    FRAME_SLEEP_SECONDS = 3
     UNAVAILABLE_LABEL = "[analysis unavailable]"
 
     RETRIES_ANALYSE = 3

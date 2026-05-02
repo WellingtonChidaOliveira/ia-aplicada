@@ -39,13 +39,13 @@ class FilterText:
             f"[0:v]trim=start=0:end={self.blur_duration:.1f},setpts=PTS-STARTPTS,"
             f"{self.dark_filters()},"
             f"boxblur={self.max_blur}:{self.max_blur},"
-            f"{self.drawtext(text_file_path, f'if(lt(t\\,{self.text_fade})\\,t/{self.text_fade}\\,1)')},"
+            # f"{self.drawtext(text_file_path, f'if(lt(t\\,{self.text_fade})\\,t/{self.text_fade}\\,1)')},"
             f"fade=t=out:st={self.blur_duration - self.fade_duration:.2f}:d={self.fade_duration}"
             f"[blurred];"
             # TRECHO NÍTIDO: resto do vídeo
             f"[0:v]trim=start={self.blur_duration:.1f},setpts=PTS-STARTPTS,"
             f"{self.dark_filters()},"
-            f"{self.drawtext(text_file_path, f'if(gt(t\\,{sharp_duration - self.text_fade:.2f})\\,({sharp_duration:.2f}-t)/{self.text_fade}\\,1)')},"
+            # f"{self.drawtext(text_file_path, f'if(gt(t\\,{sharp_duration - self.text_fade:.2f})\\,({sharp_duration:.2f}-t)/{self.text_fade}\\,1)')},"
             f"fade=t=in:st=0:d={self.fade_duration}"
             f"[sharp];"
             # CONCAT

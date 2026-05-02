@@ -61,7 +61,8 @@ class BuildClip:
             print(f"   Motivo: {seg.get('reason', '')}")
 
             # gera frase motivacional individual para este clipe
-            phrase = _gerar_frase(seg.get("reason"), self.client)
+            phrase = "aqui vai a frase"
+            # phrase = _gerar_frase(seg.get("reason"), self.client)
             print(f"   Frase: {phrase}")
 
             output_path = os.path.join(

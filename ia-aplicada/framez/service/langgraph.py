@@ -1,7 +1,7 @@
 from agent.nodes.discard_invoke import discard_invoke
 from langgraph.graph import StateGraph, START, END
 from models.graph_message import GraphMessage
-from agent.nodes.get_video import VideoInfo
+from agent.tools.video_tools import HandleVideoTools
 from agent.nodes.extract_frames import ExtractFramesNode
 from agent.nodes.analyse_frame import AnalyseFrameNode
 from agent.nodes.decide_segment import DecideSegment
@@ -9,7 +9,7 @@ from agent.nodes.build_clip import BuildClip
 
 
 def start_graph(
-    video_info: VideoInfo | None = None,
+    video_tools: HandleVideoTools | None = None,
     extract_frames: ExtractFramesNode | None = None,
     analyse_frames: AnalyseFrameNode | None = None,
     decide_segment: DecideSegment | None = None,
@@ -18,7 +18,10 @@ def start_graph(
     graph = StateGraph(GraphMessage)
 
     graph.add_node("discard_invoke", discard_invoke)
-    graph.add_node("get_video_frames", video_info.get_video_frames)
+    graph.add_node(
+        "get_video_frames",
+        lambda state: video_tools.get_video_info.invoke({"state": state}),
+    )
     graph.add_node("extract_frames", extract_frames.extract_frames)
     graph.add_node("analyse_frames", analyse_frames.analyse_frames)
     graph.add_node("decide_segment", decide_segment.decide_segment)
