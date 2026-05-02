@@ -3,8 +3,7 @@ import time
 from langchain.tools import tool
 import json
 from agent.tools.ffmpeg_tools import (
-    _generate_ffmpeg_command_internal,
-    _execute_ffmpeg_internal,
+    _generate_and_execute,
     _prepare_text_file,
 )
 
@@ -12,7 +11,8 @@ from agent.tools.ffmpeg_tools import (
 @tool
 def build_clip(video_path: str, segments_json: str, phrase: str) -> dict:
     """
-    Renders final video clips using LLM-generated FFmpeg commands.
+    Renders final video clips using LLM-chosen visual parameters.
+    The LLM decides the filter intensity, Python builds the FFmpeg command.
     Call ONCE after generate_phrase with all segments.
 
     Args:
@@ -56,7 +56,7 @@ def build_clip(video_path: str, segments_json: str, phrase: str) -> dict:
                 output_dir, f"{base_timestamp}_{video_name}_top{rank}.mp4"
             )
 
-            command = _generate_ffmpeg_command_internal(
+            result = _generate_and_execute(
                 video_path=video_path,
                 start_time=start_time,
                 duration=duration,
@@ -65,12 +65,6 @@ def build_clip(video_path: str, segments_json: str, phrase: str) -> dict:
                 rank=rank,
                 output_path=output_path,
                 style_hint="dark cinematic gym motivation",
-            )
-
-            result = _execute_ffmpeg_internal(
-                command,
-                output_path,
-                text_file_path,
             )
 
             if result["success"]:
