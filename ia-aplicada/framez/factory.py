@@ -23,12 +23,10 @@ class AgentFactory:
         result = self.agent.invoke(
             {
                 "messages": [
-                    {
-                        "role": "user",
-                        "content": f"Process this video and create a dark gym motivation clip: {full_path}",
-                    }
+                    {"role": "user", "content": f"Process this video: {full_path}"}
                 ]
-            }
+            },
+            config={"callbacks": []},
         )
 
         # última mensagem do agente é o resultado final
