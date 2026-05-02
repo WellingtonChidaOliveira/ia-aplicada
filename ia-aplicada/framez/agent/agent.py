@@ -1,9 +1,8 @@
 from langchain_openai import ChatOpenAI
 from langgraph.prebuilt import create_react_agent
 
-from agent.tools.video_tools import get_video_info, extract_frames
-from agent.tools.analyse_tools import analyse_frames
-from agent.tools.segment_tools import decide_segment
+from agent.tools.analyse_tools import analyse_video_gemini
+from agent.tools.video_tools import get_video_info
 from agent.tools.phrase_tools import generate_phrase
 from agent.tools.clip_tools import build_clip
 from utils.config import Config
@@ -34,9 +33,7 @@ def create_agent():
 
     tools = [
         get_video_info,
-        extract_frames,
-        analyse_frames,
-        decide_segment,
+        analyse_video_gemini,
         generate_phrase,
         build_clip,
     ]

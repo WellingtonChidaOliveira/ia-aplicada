@@ -1,12 +1,5 @@
-# from agent.nodes.analyse_frame import AnalyseFrameNode
-# from agent.tools.video_tools import HandleVideoTools
-# from agent.nodes.extract_frames import ExtractFramesNode
-# from agent.nodes.decide_segment import DecideSegment
-# from agent.nodes.build_clip import BuildClip
 from pathlib import Path
 
-# from service.llm_router import LLMClient
-# from service.langgraph import start_graph
 from agent.agent import create_agent
 
 
