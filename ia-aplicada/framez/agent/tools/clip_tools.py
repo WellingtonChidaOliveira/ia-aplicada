@@ -9,19 +9,26 @@ from agent.tools.ffmpeg_tools import (
 
 
 @tool
-def build_clip(video_path: str, segments_json: str, phrase: str) -> dict:
+def build_clip(
+    video_path: str, segments_json: str, phrase: str, color_grade_json: str = "{}"
+) -> dict:
     """
-    Renders final video clips using LLM-chosen visual parameters.
-    The LLM decides the filter intensity, Python builds the FFmpeg command.
+    Renders final video clips using color grading decided by Gemini.
     Call ONCE after generate_phrase with all segments.
 
     Args:
         video_path: from get_video_info
-        segments_json: JSON string from parse_gemini_analysis
+        segments_json: JSON string from parse_video_analysis
         phrase: from generate_phrase ONLY
+        color_grade_json: JSON string of color_grade from parse_video_analysis
     """
     try:
-        segments = json.loads(segments_json)
+        if isinstance(segments_json, str):
+            segments = json.loads(segments_json)
+        elif isinstance(segments_json, dict):
+            segments = segments_json.get("segments", [])
+        else:
+            segments = segments_json
     except Exception as e:
         return {
             "success": False,
@@ -29,13 +36,47 @@ def build_clip(video_path: str, segments_json: str, phrase: str) -> dict:
             "output_paths": [],
         }
 
+    if isinstance(phrase, dict):
+        phrase = phrase.get("phrase", "")
+    phrase = str(phrase).strip()
+
+    try:
+        if isinstance(color_grade_json, str):
+            color_grade = json.loads(color_grade_json) if color_grade_json != "{}" else {}
+        elif isinstance(color_grade_json, dict):
+            color_grade = color_grade_json
+        else:
+            color_grade = {}
+    except Exception:
+        color_grade = {}
+
+    # fallback se color_grade vazio
+    if not color_grade:
+        color_grade = {
+            "brightness": -0.20,
+            "contrast": 1.40,
+            "saturation": 0.40,
+            "gamma": 0.80,
+            "teal_intensity": 0.18,
+            "vignette_angle": "PI/4",
+            "fontsize": 72,
+            "text_y": "h*0.78",
+            "blur_duration": 3.0,
+        }
+
+    if not segments:
+        return {
+            "success": False,
+            "error": "No valid segments to render",
+            "output_paths": [],
+            "output_path": "",
+        }
+
     output_dir = "output"
     os.makedirs(output_dir, exist_ok=True)
 
     video_name = os.path.splitext(os.path.basename(video_path))[0]
     base_timestamp = int(time.time())
-
-    # cria o arquivo de texto UMA VEZ para todos os clipes
     text_file_path = _prepare_text_file(phrase, output_dir, base_timestamp)
 
     output_paths = []
@@ -61,10 +102,9 @@ def build_clip(video_path: str, segments_json: str, phrase: str) -> dict:
                 start_time=start_time,
                 duration=duration,
                 text_file_path=text_file_path,
-                phrase=phrase,
                 rank=rank,
                 output_path=output_path,
-                style_hint="dark cinematic gym motivation",
+                params=color_grade,
             )
 
             if result["success"]:
@@ -76,7 +116,6 @@ def build_clip(video_path: str, segments_json: str, phrase: str) -> dict:
                 errors.append(result["error"])
 
     finally:
-        # deleta o txt apenas no final, depois de todos os clipes
         try:
             if text_file_path and os.path.exists(text_file_path):
                 os.remove(text_file_path)

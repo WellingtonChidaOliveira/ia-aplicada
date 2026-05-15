@@ -1,49 +1,49 @@
+from langchain.agents import create_agent
 from langchain_openai import ChatOpenAI
-from langgraph.prebuilt import create_react_agent
 
-from agent.tools.analyse_tools import analyse_video_gemini, parse_gemini_analysis
-from agent.tools.video_tools import get_video_info
-from agent.tools.phrase_tools import generate_phrase
+# from langgraph.prebuilt import create_react_agent
+from agent.tools.analyse_tools import analyse_video_local, parse_video_analysis
 from agent.tools.clip_tools import build_clip
+from agent.tools.phrase_tools import generate_phrase
+from agent.tools.video_tools import get_video_info
 from utils.config import Config
-
 
 SYSTEM_PROMPT = """You are a video processing agent specialized in creating dark gym motivation clips.
 
 Given a video path, execute these steps IN ORDER:
 1. get_video_info — get video metadata
-2. analyse_video_gemini — analyse full video
-3. parse_gemini_analysis — pass gemini_analysis AND duration
-4. generate_phrase — generate ONE dark motivational phrase
-5. build_clip — call EXACTLY ONCE with video_path, segments_json and phrase
+2. analyse_video_local — extract and analyse frames locally with Ollama vision
+3. parse_video_analysis — pass analysis AND duration
+4. generate_phrase — generate ONE dark motivational phrase (no arguments)
+5. build_clip — call ONCE with video_path, segments_json, phrase, color_grade_json
 
-CRITICAL RULES:
-- build_clip must be called EXACTLY ONCE — never retry, never call again
-- If build_clip returns success=false, report the error and STOP
-- phrase must come from generate_phrase output only
-- After build_clip completes (success or failure), report result and STOP
+Use parse_video_analysis.segments_json as build_clip.segments_json.
+Use parse_video_analysis.color_grade_json as build_clip.color_grade_json.
+Use generate_phrase.phrase as build_clip.phrase.
 
-Do not loop. Do not retry failed steps. Execute once and report."""
+CRITICAL: build_clip must be called EXACTLY ONCE.
+CRITICAL: phrase must come from generate_phrase output only.
+When done, report the output_paths."""
 
 
-def create_agent():
+def agent():
     llm = ChatOpenAI(
         model="openai/gpt-4o-mini",
         base_url=Config.OPENROUTER_BASE_URL,
         api_key=Config.OPENROUTER_API_KEY,
-        temperature=0,
+        temperature=1.1,
     )
 
     tools = [
         get_video_info,
-        analyse_video_gemini,
-        parse_gemini_analysis,
+        analyse_video_local,
+        parse_video_analysis,
         generate_phrase,
         build_clip,
     ]
 
-    return create_react_agent(
+    return create_agent(
         llm,
         tools,
-        prompt=SYSTEM_PROMPT,
+        system_prompt=SYSTEM_PROMPT,
     )

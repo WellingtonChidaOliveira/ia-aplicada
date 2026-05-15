@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from agent.agent import create_agent
+from agent.agent import agent as create_agent
 
 
 class AgentFactory:
